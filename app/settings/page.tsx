@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { WalletButton } from "@/components/WalletButton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { CheckCircle } from "lucide-react";
 
 export default function SettingsPage() {
 const [saved, setSaved] = useState(false);
@@ -56,7 +56,7 @@ Max Buy Per Trade (SOL)
 type="number"
 value={settings.maxBuyPerTrade}
 onChange={(e) => handleChange("maxBuyPerTrade", e.target.value)}
-className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400 transition-colors"
+className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#4693ff] transition-colors"
 step="0.05"
 min="0.01"
 max="10"
@@ -74,7 +74,7 @@ Minimum Organic Score
 type="number"
 value={settings.minOrganicScore}
 onChange={(e) => handleChange("minOrganicScore", e.target.value)}
-className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-amber-400 transition-colors"
+className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#4693ff] transition-colors"
 step="5"
 min="0"
 max="100"
@@ -95,7 +95,7 @@ key={bps}
 onClick={() => handleChange("slippageBps", bps)}
 className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
 settings.slippageBps === bps
-? "bg-amber-400 text-black"
+? "bg-[#4693ff] text-black"
 : "bg-zinc-800 text-zinc-400 hover:text-white"
 }`}
 >
@@ -119,7 +119,7 @@ Automatically sell when TP or SL is hit
 <Switch
 checked={settings.autoSell}
 onCheckedChange={(v) => handleChange("autoSell", v)}
-className="data-[state=checked]:bg-amber-400"
+className="data-[state=checked]:bg-[#4693ff]"
 />
 </div>
 
@@ -165,14 +165,14 @@ max="100"
 <button
 key={chain}
 onClick={() => handleChange("chain", chain)}
+disabled={chain !== "solana"}
 className={`flex-1 py-2 rounded-lg text-xs font-medium uppercase transition-colors ${
 settings.chain === chain
-? "bg-amber-400 text-black"
+? "bg-[#4693ff] text-black"
 : chain !== "solana"
 ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
 : "bg-zinc-800 text-zinc-400 hover:text-white"
 }`}
-disabled={chain !== "solana"}
 >
 {chain}
 {chain !== "solana" && (
@@ -186,7 +186,7 @@ disabled={chain !== "solana"}
 {/* Save button */}
 <Button
 onClick={handleSave}
-className="w-full bg-amber-400 hover:bg-amber-500 text-black font-semibold"
+className="w-full bg-[#4693ff] hover:bg-[#3a7de0] text-black font-semibold"
 >
 {saved ? (
 <span className="flex items-center gap-2">

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -117,6 +119,39 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+* {
+scrollbar-width: thin;
+scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+
+*::-webkit-scrollbar {
+width: 4px;
+}
+
+*::-webkit-scrollbar-track {
+background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+background-color: rgba(0,0,0,0.15);
+border-radius: 2px;
+}
+
+* {
+scrollbar-width: thin;
+scrollbar-color: rgba(0,0,0,0.1) transparent;
+}
+*::-webkit-scrollbar {
+width: 4px;
+}
+*::-webkit-scrollbar-track {
+background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+background-color: rgba(0,0,0,0.1);
+border-radius: 2px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -127,4 +162,7 @@
   html {
     @apply font-sans;
   }
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+        }
 }

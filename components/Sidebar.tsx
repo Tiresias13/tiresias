@@ -1,78 +1,56 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, History, Settings, Eye } from "lucide-react";
+import { Radio, Shield, Waves, Wallet, History, Settings, Eye } from "lucide-react";
 import { clsx } from "clsx";
+import { useWindowManager } from "./WindowManager";
 
-const navItems = [
-{
-label: "Signal Feed",
-href: "/dashboard",
-icon: LayoutDashboard,
-},
-{
-label: "Positions",
-href: "/positions",
-icon: Wallet,
-},
-{
-label: "History",
-href: "/history",
-icon: History,
-},
-{
-label: "Settings",
-href: "/settings",
-icon: Settings,
-},
+const windowItems = [
+{ id: "feed", label: "Agent Feed", icon: Radio },
+{ id: "intel", label: "Intel", icon: Shield },
+{ id: "whale", label: "Trapped Whale", icon: Waves },
+{ id: "positions", label: "Positions", icon: Wallet },
+{ id: "history", label: "History", icon: History },
+{ id: "settings", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar() {
-const pathname = usePathname();
+const { windows, openWindow, closeWindow } = useWindowManager();
+
+const handleToggle = (id: string) => {
+const win = windows[id];
+if (!win || !win.isOpen) {
+openWindow(id);
+} else {
+closeWindow(id);
+}
+};
 
 return (
-<aside className="fixed left-0 top-0 h-screen w-56 bg-zinc-950 border-r border-zinc-800 flex flex-col z-40">
-{/* Logo */}
-<div className="px-6 py-5 border-b border-zinc-800">
-<div className="flex items-center gap-2">
-<Eye className="w-5 h-5 text-amber-400" />
-<span className="text-lg font-bold tracking-tight text-white">
-TIRESIAS
-</span>
-</div>
-<p className="text-xs text-zinc-500 mt-0.5">See before others do.</p>
+<aside className="fixed left-0 top-0 h-screen w-14 bg-white border-r border-zinc-200 flex flex-col z-40 items-center py-3 gap-1">
+<div className="mb-3 pb-3 border-b border-zinc-200 w-full flex justify-center">
+<Eye className="w-5 h-5 text-black" />
 </div>
 
-{/* Navigation */}
-<nav className="flex-1 px-3 py-4 space-y-1">
-{navItems.map((item) => {
-const Icon = item.icon;
-const isActive = pathname === item.href;
+{windowItems.map(({ id, label, icon: Icon }) => {
+const win = windows[id];
+const isActive = win?.isOpen;
 return (
-<Link
-key={item.href}
-href={item.href}
+<button
+key={id}
+onClick={() => handleToggle(id)}
+title={label}
 className={clsx(
-"flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-isActive
-? "bg-amber-400/10 text-amber-400"
-: "text-zinc-400 hover:text-white hover:bg-zinc-800"
+"w-9 h-9 flex items-center justify-center rounded transition-colors group relative",
+isActive ? "bg-black text-white" : "text-zinc-400 hover:text-black hover:bg-zinc-100"
 )}
 >
 <Icon className="w-4 h-4" />
-{item.label}
-</Link>
+<span className="absolute left-12 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 font-mono">
+{label}
+</span>
+</button>
 );
 })}
-</nav>
-
-{/* Bottom */}
-<div className="px-4 py-4 border-t border-zinc-800">
-<p className="text-xs text-zinc-600 text-center">
-Powered by AVE API
-</p>
-</div>
 </aside>
 );
 }

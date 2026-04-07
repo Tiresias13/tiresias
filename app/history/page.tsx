@@ -1,12 +1,34 @@
 "use client";
 
+import { TrendingUp, TrendingDown, Clock } from "lucide-react";
+import clsx from "clsx";
 import { Sidebar } from "@/components/Sidebar";
 import { WalletButton } from "@/components/WalletButton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DEMO_HISTORY } from "@/lib/demoData";
-import { TrendingUp, TrendingDown, Clock } from "lucide-react";
-import { clsx } from "clsx";
+
+const DEMO_HISTORY = [
+{
+symbol: "SOL",
+name: "Solana",
+entryPrice: 130.0,
+exitPrice: 158.3,
+pnlUsd: 217.69,
+pnlPercent: 21.77,
+result: "win" as const,
+closedAt: Math.floor(Date.now() / 1000) - 86400,
+},
+{
+symbol: "BONK",
+name: "Bonk",
+entryPrice: 0.00002841,
+exitPrice: 0.00002201,
+pnlUsd: -112.5,
+pnlPercent: -22.53,
+result: "loss" as const,
+closedAt: Math.floor(Date.now() / 1000) - 172800,
+},
+];
 
 function formatDate(ts: number): string {
 return new Date(ts * 1000).toLocaleString("id-ID", {
@@ -39,10 +61,7 @@ const avgPnl = history.length > 0 ? totalPnl / history.length : 0;return (
 <div className="grid grid-cols-4 gap-4 mb-6">
 <Card className="bg-zinc-900 border-zinc-800 p-4">
 <p className="text-xs text-zinc-500 mb-1">Win Rate</p>
-<p className={clsx(
-"text-2xl font-bold",
-winRate >= 50 ? "text-green-400" : "text-red-400"
-)}>
+<p className={clsx("text-2xl font-bold", winRate >= 50 ? "text-green-400" : "text-red-400")}>
 {winRate.toFixed(0)}%
 </p>
 <p className="text-xs text-zinc-600 mt-0.5">
@@ -51,19 +70,13 @@ winRate >= 50 ? "text-green-400" : "text-red-400"
 </Card>
 <Card className="bg-zinc-900 border-zinc-800 p-4">
 <p className="text-xs text-zinc-500 mb-1">Total PnL</p>
-<p className={clsx(
-"text-2xl font-bold",
-totalPnl >= 0 ? "text-green-400" : "text-red-400"
-)}>
+<p className={clsx("text-2xl font-bold", totalPnl >= 0 ? "text-green-400" : "text-red-400")}>
 {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
 </p>
 </Card>
 <Card className="bg-zinc-900 border-zinc-800 p-4">
 <p className="text-xs text-zinc-500 mb-1">Avg PnL</p>
-<p className={clsx(
-"text-2xl font-bold",
-avgPnl >= 0 ? "text-green-400" : "text-red-400"
-)}>
+<p className={clsx("text-2xl font-bold", avgPnl >= 0 ? "text-green-400" : "text-red-400")}>
 {avgPnl >= 0 ? "+" : ""}${avgPnl.toFixed(2)}
 </p>
 </Card>
@@ -87,26 +100,25 @@ return (
 <div className="flex items-center justify-between">
 {/* Left */}
 <div className="flex items-center gap-3">
-<div className={clsx(
+<div
+className={clsx(
 "w-8 h-8 rounded-full flex items-center justify-center",
 isWin ? "bg-green-400/10" : "bg-red-400/10"
-)}>
-{isWin
-? <TrendingUp className="w-4 h-4 text-green-400" />
-: <TrendingDown className="w-4 h-4 text-red-400" />
-}
+)}
+>
+{isWin ? (
+<TrendingUp className="w-4 h-4 text-green-400" />
+) : (
+<TrendingDown className="w-4 h-4 text-red-400" />
+)}
 </div>
 <div>
 <div className="flex items-center gap-2">
-<span className="text-sm font-semibold text-white">
-{trade.symbol}
-</span>
+<span className="text-sm font-semibold text-white">{trade.symbol}</span>
 <Badge
 className={clsx(
 "text-xs border-0 py-0",
-isWin
-? "bg-green-400/10 text-green-400"
-: "bg-red-400/10 text-red-400"
+isWin ? "bg-green-400/10 text-green-400" : "bg-red-400/10 text-red-400"
 )}
 >
 {isWin ? "WIN" : "LOSS"}
@@ -121,19 +133,17 @@ isWin
 <div>
 <p className="text-xs text-zinc-500">Entry → Exit</p>
 <p className="text-xs font-mono text-zinc-400">
-${trade.entryPrice.toFixed(8)} →{" "}
-${trade.exitPrice.toFixed(8)}
+${trade.entryPrice.toFixed(8)} → ${trade.exitPrice.toFixed(8)}
 </p>
 </div>
 <div>
 <p className="text-xs text-zinc-500">PnL</p>
-<p className={clsx(
-"text-sm font-bold",
-isWin ? "text-green-400" : "text-red-400"
-)}>
-{isWin ? "+" : ""}{trade.pnlPercent.toFixed(1)}%
+<p className={clsx("text-sm font-bold", isWin ? "text-green-400" : "text-red-400")}>
+{isWin ? "+" : ""}
+{trade.pnlPercent.toFixed(1)}%
 <span className="text-xs ml-1">
-(${trade.pnlUsd > 0 ? "+" : ""}{trade.pnlUsd.toFixed(2)})
+(${trade.pnlUsd > 0 ? "+" : ""}
+{trade.pnlUsd.toFixed(2)})
 </span>
 </p>
 </div>

@@ -34,7 +34,7 @@ className="text-zinc-400 hover:text-red-400 hover:bg-red-400/10"
 return (
 <Button
 onClick={() => setVisible(true)}
-className="bg-amber-400 hover:bg-amber-500 text-black font-semibold text-sm"
+className="bg-[#4693ff] hover:bg-[#3a7de0] text-black font-semibold text-sm"
 >
 <Wallet className="w-4 h-4 mr-2" />
 Connect Wallet

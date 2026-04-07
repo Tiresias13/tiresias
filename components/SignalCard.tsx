@@ -1,28 +1,24 @@
 "use client";
 
-import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { OrganicScore } from "@/components/OrganicScore";
-import { SparklineChart, generateDemoSparkline } from "@/components/SparklineChart";
 import { ScoredToken } from "@/lib/scoring";
 import { clsx } from "clsx";
-import { TrendingUp, TrendingDown, Clock, Users, Droplets, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, Users, Droplets } from "lucide-react";
 
 interface SignalCardProps {
 token: ScoredToken;
 isDemoMode: boolean;
 onExecute: (token: ScoredToken, amountSol: number) => Promise<void>;
 minScore: number;
+onClick: (token: ScoredToken) => void;
 }
 
 function formatAge(launchAt: number): string {
 const now = Math.floor(Date.now() / 1000);
 const mins = Math.floor((now - launchAt) / 60);
 if (mins < 60) return `${mins}m`;
-const hours = Math.floor(mins / 60);
-return `${hours}h ${mins % 60}m`;
+return `${Math.floor(mins / 60)}h${mins % 60}m`;
 }
 
 function formatUsd(val: number): string {
@@ -31,146 +27,101 @@ if (val >= 1_000) return `$${(val / 1_000).toFixed(1)}K`;
 return `$${val.toFixed(0)}`;
 }
 
-export function SignalCard({ token, isDemoMode, onExecute, minScore }: SignalCardProps) {
-const [loading, setLoading] = useState(false);
-const [amount, setAmount] = useState("0.1");
-
+export function SignalCard({ token, isDemoMode, onExecute, minScore, onClick }: SignalCardProps) {
 const isPositive = token.token_price_change_1h >= 0;
-const sparklineData = generateDemoSparkline(
-token.current_price_usd,
-isPositive ? "up" : "down"
-);
 
-const isFiltered = token.organicScore < minScore;
+if (token.finalScore < minScore) return null;
 
-if (isFiltered) return null;
-
-async function handleExecute() {
-setLoading(true);
-await onExecute(token, parseFloat(amount) || 0.1);
-setLoading(false);
-}return (
-<Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-600 transition-colors p-4">
-{/* Header */}
-<div className="flex items-start justify-between mb-3">
+return (
+<Card
+onClick={(e) => { e.stopPropagation(); onClick(token); }}
+className="bg-zinc-900 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all cursor-pointer p-3 group"
+role="button"
+tabIndex={0}
+onKeyDown={(e) => e.key === "Enter" && onClick(token)}
+>
+{/* Header row */}
+<div className="flex items-center justify-between mb-2">
 <div className="flex items-center gap-2">
 {token.logo_url ? (
 <img
 src={token.logo_url}
 alt={token.symbol}
-className="w-8 h-8 rounded-full bg-zinc-800"
+className="w-7 h-7 rounded-full bg-zinc-800 flex-shrink-0"
 />
 ) : (
-<div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400">
+<div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400 flex-shrink-0">
 {token.symbol.slice(0, 2)}
 </div>
 )}
 <div>
 <div className="flex items-center gap-1.5">
 <span className="font-semibold text-white text-sm">{token.symbol}</span>
-<Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400 py-0">
+<Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500 py-0 px-1">
 {token.chain}
 </Badge>
+</div>
+<p className="text-xs text-zinc-600 truncate max-w-[120px]">{token.name}</p>
+</div>
+</div>
+
+{/* Score badge */}
+<div className="flex flex-col items-end gap-0.5">
+<span className={clsx("text-lg font-bold tabular-nums leading-none", token.verdictColor)}>
+{token.finalScore}
+</span>
+<span className={clsx("text-xs font-bold tracking-wide", token.verdictColor)}>
+{token.verdict}
+</span>
+</div>
+</div>
+
+{/* Price row */}
+<div className="flex items-center justify-between mb-2">
+<span className="text-xs font-mono text-zinc-300">
+${token.current_price_usd.toFixed(8)}
+</span>
+<span className={clsx(
+"flex items-center gap-0.5 text-xs font-semibold",
+isPositive ? "text-green-400" : "text-red-400"
+)}>
+{isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+{isPositive ? "+" : ""}{token.token_price_change_1h.toFixed(1)}%
+</span>
+</div>
+
+{/* Stats row */}
+<div className="flex items-center justify-between text-xs text-zinc-500">
+<span className="flex items-center gap-1">
+<Droplets className="w-3 h-3" />
+{formatUsd(token.market_cap)}
+</span>
+<span className="flex items-center gap-1">
+<Users className="w-3 h-3" />
+{token.holders.toLocaleString()}
+</span>
+<span className="flex items-center gap-1">
+<Clock className="w-3 h-3" />
+{formatAge(token.launch_at)}
+</span>
 {isDemoMode && (
-<Badge className="text-xs bg-amber-400/10 text-amber-400 border-0 py-0">
+<Badge className="text-xs bg-[#4693ff]/10 text-[#4693ff] border-0 py-0px-1">
 DEMO
 </Badge>
 )}
 </div>
-<p className="text-xs text-zinc-500">{token.name}</p>
-</div>
-</div>
 
-{/* Price change */}
-<div className={clsx(
-"flex items-center gap-1 text-sm font-semibold",
-isPositive ? "text-green-400" : "text-red-400"
-)}>
-{isPositive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-{isPositive ? "+" : ""}{token.token_price_change_1h.toFixed(1)}%
-</div>
-</div>
-
-{/* Sparkline */}
-<div className="mb-3">
-<SparklineChart data={sparklineData} positive={isPositive} />
-</div>
-
-{/* Organic Score */}
-<div className="mb-3">
-<OrganicScore score={token.organicScore} breakdown={token.scoreBreakdown} />
-</div>
-
-{/* Signal reason */}
-<p className="text-xs text-zinc-500 mb-3 leading-relaxed">
-{token.signalReason}
+{/* Contrarian warning */}
+{token.contrarian?.warning && (
+<p className="text-xs text-yellow-500/70 mt-2 border-t border-zinc-800 pt-2">
+⚠️ {token.contrarian.warning}
 </p>
-
-{/* Stats row */}
-<div className="grid grid-cols-4 gap-2 mb-4">
-<div className="flex flex-col items-center gap-0.5">
-<span className="text-xs text-zinc-500 flex items-center gap-0.5">
-<Droplets className="w-3 h-3" /> MC
-</span>
-<span className="text-xs font-medium text-zinc-300">
-{formatUsd(token.market_cap)}
-</span>
-</div>
-<div className="flex flex-col items-center gap-0.5">
-<span className="text-xs text-zinc-500 flex items-center gap-0.5">
-<Zap className="w-3 h-3" /> Vol 1h
-</span>
-<span className="text-xs font-medium text-zinc-300">
-{formatUsd(token.token_tx_volume_usd_1h)}
-</span>
-</div>
-<div className="flex flex-col items-center gap-0.5">
-<span className="text-xs text-zinc-500 flex items-center gap-0.5">
-<Users className="w-3 h-3" /> Holders
-</span>
-<span className="text-xs font-medium text-zinc-300">
-{token.holders.toLocaleString()}
-</span>
-</div>
-<div className="flex flex-col items-center gap-0.5">
-<span className="text-xs text-zinc-500 flex items-center gap-0.5">
-<Clock className="w-3 h-3" /> Age
-</span>
-<span className="text-xs font-medium text-zinc-300">
-{formatAge(token.launch_at)}
-</span>
-</div>
-</div>
-
-{/* Execute */}
-<div className="flex items-center gap-2">
-<div className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-3 py-1.5 flex-1">
-<span className="text-xs text-zinc-500">SOL</span>
-<input
-type="number"
-value={amount}
-onChange={(e) => setAmount(e.target.value)}
-className="bg-transparent text-sm text-white w-full outline-none font-mono"
-step="0.05"
-min="0.01"
-max="10"
-/>
-</div>
-<Button
-onClick={handleExecute}
-disabled={loading}
-className={clsx(
-"flex-1 font-semibold text-sm",
-token.organicScore >= 70
-? "bg-green-500 hover:bg-green-600 text-black"
-: token.organicScore >= 45
-? "bg-yellow-500 hover:bg-yellow-600 text-black"
-: "bg-zinc-700 hover:bg-zinc-600 text-zinc-300"
 )}
->
-{loading ? "Executing..." : isDemoMode ? "Demo Buy" : "Execute Buy"}
-</Button>
-</div>
+
+{/* Hover hint */}
+<p className="text-xs text-zinc-700 mt-2 text-center group-hover:text-zinc-500 transition-colors">
+Click for details →
+</p>
 </Card>
 );
 }

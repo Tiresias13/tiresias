@@ -4,6 +4,7 @@ import "./globals.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WalletContextProvider } from "@/components/WalletContextProvider";
+import { Providers } from "@/components/Providers";
 
 const geistSans = Geist({
 variable: "--font-geist-sans",
@@ -30,7 +31,9 @@ return (
 <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
 <WalletContextProvider>
 <TooltipProvider>
+<Providers>
 {children}
+</Providers>
 </TooltipProvider>
 </WalletContextProvider>
 </body>
