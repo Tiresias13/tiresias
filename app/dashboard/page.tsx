@@ -9,7 +9,8 @@ import { DEMO_TOKENS } from "@/lib/demoData";
 import { Switch } from "@/components/ui/switch";
 import { clsx } from "clsx";
 import dynamic from "next/dynamic";
-import { fetchRankTokens, fetchSmartWallets, fetchWalletTokens, WalletToken } from "@/lib/ave";
+import { supabase } from "@/lib/supabase";
+import { fetchRankTokens, fetchSmartWallets, fetchWalletTokens, fetchEnrichedToken, WalletToken } from "@/lib/ave";
 const DashboardWithProvider = dynamic(
 () => Promise.resolve(function Dashboard() {
 return <DashboardInner />;
@@ -51,6 +52,7 @@ entryPrice: number;
 amountSol: number;
 openedAt: number;
 pnlPercent: number;
+pnlSol: number;
 }
 
 interface SmartWallet {
@@ -59,6 +61,18 @@ tag?: string;
 total_profit: number;
 win_rate?: number;
 trade_count?: number;
+}
+
+interface TradeHistory {
+id: string;
+token: ScoredToken;
+entryPrice: number;
+exitPrice: number;
+amountSol: number;
+openedAt: number;
+closedAt: number;
+pnlPercent: number;
+pnlSol: number;
 }
 
 function formatAge(launchAt: number): string {
@@ -536,12 +550,19 @@ function PositionsWindowContent({ positions, onClose }: {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-black">{pos.token.symbol}</span>
                     <div className="flex items-center gap-2">
-                      <span className={clsx("text-xs font-mono font-bold",
-                        isWin ? "text-black" : "text-zinc-400"
-                      )}>
+                    <div className="text-right">
+                    <span className={clsx("text-xs font-mono font-bold block",
+                    isWin ? "text-black" : "text-zinc-400"
+                    )}>
                         {isWin ? "+" : ""}{pos.pnlPercent.toFixed(1)}%
-                      </span>
-                      <button
+                        </span>
+                        <span className={clsx("text-xs font-mono",
+                        isWin ? "text-black" : "text-zinc-400"
+                    )}>
+                    {isWin ? "+" : ""}{(pos.pnlSol ?? 0).toFixed(4)} SOL
+                    </span>
+                      </div>
+                        <button
                         onClick={() => onClose(i)}
                         className="text-xs px-2 py-0.5 border border-zinc-300 text-zinc-500 hover:border-black hover:text-black transition-colors uppercase"
                       >
@@ -574,54 +595,59 @@ function PositionsWindowContent({ positions, onClose }: {
 // ============================================================
 // History Window Content
 // ============================================================
-function HistoryWindowContent({ logs }: { logs: LogEntry[] }) {
-  const signals = logs.filter((e) => e.action === "signal" || e.action === "executed");
-  const skips = logs.filter((e) => e.action === "skip" || e.action === "force_skip");return (
-    <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 px-3 py-2 border-b border-zinc-100 flex items-center gap-2">
-        <span className="text-xs font-bold text-black uppercase tracking-widest">History</span>
-        <div className="ml-auto flex gap-3 text-xs font-mono">
-          <span className="text-zinc-400">SIG <span className="text-black">{signals.length}</span></span>
-          <span className="text-zinc-400">SKIP <span className="text-zinc-400">{skips.length}</span></span>
-        </div>
-      </div>
+function HistoryWindowContent({ logs, tradeHistory }: {
+logs: LogEntry[];
+tradeHistory: TradeHistory[];
+}) {
+const totalPnl = tradeHistory.reduce((a, t) => a + t.pnlPercent, 0);
+const wins = tradeHistory.filter((t) => t.pnlPercent >= 0).length;
 
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-px">
-        {logs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-300 py-12">
-            <p className="text-xs uppercase tracking-widest">No history yet</p>
-          </div>
-        ) : (
-          [...logs].reverse().map((entry) => (
-            <div key={entry.id} className={clsx(
-              "flex items-center gap-3 px-3 py-2 border-l-2",
-              entry.action === "signal" || entry.action === "executed"
-                ? "border-l-black" : "border-l-zinc-200"
-            )}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-black">{entry.token.symbol}</span>
-                  <span className={clsx("text-xs font-bold uppercase",
-                    entry.action === "executed" ? "text-black" :
-                    entry.action === "signal" ? "text-black" : "text-zinc-300"
-                  )}>
-                    {entry.action.replace("_", " ")}
-                  </span>
-                  <span className="text-xs font-mono text-zinc-400 ml-auto">{entry.token.finalScore}</span>
-                </div>
-                <p className="text-xs text-zinc-400 truncate">
-                  {entry.token.traderInsight}
-                </p>
-              </div>
-              <span className="text-xs text-zinc-300 font-mono flex-shrink-0">
-                {formatTime(entry.timestamp)}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
+return (
+<div className="flex flex-col h-full">
+<div className="flex-shrink-0 px-3 py-2 border-b border-zinc-100 flex items-center gap-2">
+<span className="text-xs font-bold text-black uppercase tracking-widest">Trade History</span>
+<div className="ml-auto flex gap-3 text-xs font-mono">
+<span className="text-zinc-400">TRADES <span className="text-black">{tradeHistory.length}</span></span>
+<span className="text-zinc-400">WIN <span className="text-black">{wins}</span></span>
+<span className={clsx("font-bold", totalPnl >= 0 ? "text-black" : "text-zinc-400")}>
+{totalPnl >= 0 ? "+" : ""}{totalPnl.toFixed(1)}%
+</span>
+</div>
+</div>
+
+<div className="flex-1 overflow-y-auto px-3 py-2 space-y-px">
+{tradeHistory.length === 0 ? (
+<div className="flex flex-col items-center justify-center h-full text-zinc-300 py-12">
+<p className="text-xs uppercase tracking-widest">No closed trades yet</p>
+</div>
+) : (
+[...tradeHistory].reverse().map((trade) => (
+<div key={trade.id} className={clsx(
+"border-l-2 px-3 py-2.5",
+trade.pnlPercent >= 0 ? "border-l-black" : "border-l-zinc-300"
+)}>
+<div className="flex items-center justify-between mb-1">
+<span className="text-xs font-bold text-black">{trade.token.symbol}</span>
+<span className={clsx("text-xs font-mono font-bold",
+trade.pnlPercent >= 0 ? "text-black" : "text-zinc-400"
+)}>
+{trade.pnlPercent >= 0 ? "+" : ""}{trade.pnlPercent.toFixed(1)}%
+</span>
+</div>
+<div className="flex items-center justify-between text-xs text-zinc-400">
+<span>Entry <span className="font-mono text-black">${trade.entryPrice.toFixed(8)}</span></span>
+<span>Exit <span className="font-mono text-black">${trade.exitPrice.toFixed(8)}</span></span>
+<span className="font-mono">{trade.amountSol} SOL</span>
+</div>
+<div className="flex items-center justify-between text-xs text-zinc-300 mt-0.5">
+<span>{formatTime(trade.openedAt)} → {formatTime(trade.closedAt)}</span>
+</div>
+</div>
+))
+)}
+</div>
+</div>
+);
 }
 
 // ============================================================
@@ -693,6 +719,7 @@ const { connection } = useConnection();
   const [activeFilter, setActiveFilter] = useState("all");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [tradeHistory, setTradeHistory] = useState<TradeHistory[]>([]);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [scanCount, setScanCount] = useState(0);
   const [signalCount, setSignalCount] = useState(0);
@@ -703,11 +730,117 @@ const { connection } = useConnection();
   const [amountSol, setAmountSol] = useState(0.1);
   const [tpPercent, setTpPercent] = useState(50);
   const [slPercent, setSlPercent] = useState(20);
+  
+  // Load trade history from Supabase when wallet connect
+        useEffect(() => {
+        if (!publicKey) return;
+        const wallet = publicKey.toString();
+
+        const loadHistory = async () => {
+        const { data } = await supabase
+        .from("trade_history")
+        .select("*")
+        .eq("wallet_address", wallet)
+        .order("closed_at", { ascending: false })
+        .limit(100);
+
+        if (data && data.length > 0) {
+        setTradeHistory(data.map((t) => ({
+        id: t.id,
+        token: { symbol: t.token_symbol, token: t.token_address } as any,
+        entryPrice: t.entry_price,
+        exitPrice: t.exit_price,
+        amountSol: t.amount_sol,
+        openedAt: t.opened_at,
+        closedAt: t.closed_at,
+        pnlPercent: t.pnl_percent,
+        pnlSol: t.pnl_sol,
+        })));
+        }
+        };
+
+        loadHistory();
+        }, [publicKey]);
+
+// Save settings to Supabase when changing
+useEffect(() => {
+if (!publicKey) return;
+const wallet = publicKey.toString();
+
+const saveSettings = async () => {
+await supabase.from("user_settings").upsert({
+wallet_address: wallet,
+min_score: minScore,
+amount_sol: amountSol,
+tp_percent: tpPercent,
+sl_percent: slPercent,
+updated_at: new Date().toISOString(),
+});
+};
+
+saveSettings();
+}, [publicKey, minScore, amountSol, tpPercent, slPercent]);
 
   const seenTokens = useRef<Set<string>>(new Set());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const alertTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+// Price polling untuk open positions
+useEffect(() => {
+if (positions.length === 0) return;
+
+const pollPrices = async () => {
+if (isDemoMode) {
+// Simulasi price movement di demo
+setPositions((prev) => prev.map((pos) => {
+const change = (Math.random() - 0.48) * 0.06;
+const newPrice = pos.token.current_price_usd * (1 + change);
+const pnlPercent = pos.entryPrice > 0
+? ((newPrice - pos.entryPrice) / pos.entryPrice) * 100
+: 0;
+return {
+...pos,
+token: { ...pos.token, current_price_usd: newPrice },
+pnlPercent,
+pnlSol: pos.amountSol * (pnlPercent / 100),
+};
+
+}));
+} else {
+// Live mode — fetch harga real dari AVE
+const updated = await Promise.all(
+positions.map(async (pos) => {
+try {
+const tokenAddress = pos.token.token.includes("-")
+? pos.token.token.split("-")[0]
+: pos.token.token;
+const chain = pos.token.chain || "solana";
+const data = await fetchEnrichedToken(tokenAddress, chain);
+if (!data) return pos;
+const currentPrice = data.current_price_usd;
+const pnlPercent = pos.entryPrice > 0
+? ((currentPrice - pos.entryPrice) / pos.entryPrice) * 100
+: 0;
+return {
+...pos,
+token: { ...pos.token, current_price_usd: currentPrice },
+pnlPercent,
+pnlSol: pos.amountSol * (pnlPercent / 100),
+};
+
+} catch {
+return pos;
+}
+})
+);
+setPositions(updated);
+}
+};
+
+pollPrices();
+const priceInterval = setInterval(pollPrices, 5_000);
+return () => clearInterval(priceInterval);
+}, [positions.length, isDemoMode]);
   useEffect(() => {
     try {
       const saved = localStorage.getItem("tiresias_logs");
@@ -1021,25 +1154,61 @@ return(
           <FloatingWindow id="positions">
             <PositionsWindowContent
                 positions={positions}
-                onClose={(i) => setPositions((prev) => prev.filter((_, idx) => idx !== i))}/>
-            </FloatingWindow>
+                onClose={(i) => {
+                      const pos = positions[i];
+                      const trade = {
+                      id: `${pos.token.token}-${Date.now()}`,
+                      token_address: pos.token.token,
+                      token_symbol: pos.token.symbol,
+                      entry_price: pos.entryPrice,
+                      exit_price: pos.token.current_price_usd,
+                      amount_sol: pos.amountSol,
+                      pnl_percent: pos.pnlPercent,
+                      pnl_sol: pos.pnlSol ?? 0,
+                      opened_at: pos.openedAt,
+                      closed_at: Math.floor(Date.now() / 1000),
+                      };
 
-<FloatingWindow id="history">
-<HistoryWindowContent logs={logs} />
-</FloatingWindow>
+                      setTradeHistory((prev) => [...prev, {
+                      id: trade.id,
+                      token: pos.token,
+                      entryPrice: trade.entry_price,
+                      exitPrice: trade.exit_price,
+                      amountSol: trade.amount_sol,
+                      openedAt: trade.opened_at,
+                      closedAt: trade.closed_at,
+                      pnlPercent: trade.pnl_percent,
+                      pnlSol: trade.pnl_sol,
+                      }]);
 
-<FloatingWindow id="settings">
-<SettingsWindowContent
-minScore={minScore} setMinScore={setMinScore}
-amountSol={amountSol} setAmountSol={setAmountSol}
-tpPercent={tpPercent} setTpPercent={setTpPercent}
-slPercent={slPercent} setSlPercent={setSlPercent}
-/>
-</FloatingWindow>
-        </div>
+                      if (publicKey) {
+                      supabase.from("trade_history").insert({
+                      ...trade,
+                      wallet_address: publicKey.toString(),
+                      });
+                      }
 
+                      setPositions((prev) => prev.filter((_, idx) => idx !== i));
+                      }}
+                      
+                      />
+                      </FloatingWindow>
+
+                      <FloatingWindow id="history">
+                      <HistoryWindowContent logs={logs} tradeHistory={tradeHistory} />
+                      </FloatingWindow>
+
+
+                      <FloatingWindow id="settings">
+                      <SettingsWindowContent
+                      minScore={minScore} setMinScore={setMinScore}
+                      amountSol={amountSol} setAmountSol={setAmountSol}
+                      tpPercent={tpPercent} setTpPercent={setTpPercent}
+                      slPercent={slPercent} setSlPercent={setSlPercent}
+                      />
+                      </FloatingWindow>
+                              </div>
         <Taskbar />
-
         {positions.length > 0 && (
           <div className="flex-shrink-0 border-t border-zinc-200 bg-zinc-50 px-4 py-2 flex items-center gap-4 overflow-x-auto">
             <span className="text-xs text-zinc-400 uppercase tracking-widest flex-shrink-0">Positions</span>

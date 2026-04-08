@@ -104,7 +104,8 @@ fetchContractData(tokenAddress, chain),
 const tokenJson = await tokenRes.json();
 if (tokenJson.status !== 1) return null;
 
-const t = tokenJson.data.token;
+const t = tokenJson.data?.token || tokenJson.data;
+if (!t) return null;
 
 return {
 token: t.token,
