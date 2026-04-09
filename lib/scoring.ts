@@ -51,6 +51,14 @@ forceSkipReason: string | null;
 warning: string | null;
 }
 
+export interface ScoreBreakdown {
+feeMcRatio: boolean;
+volumeTrend: boolean;
+holderCount: boolean;
+lockStatus: boolean;
+tokenAge: boolean;
+}
+
 export interface ScoredToken extends TokenData {
 finalScore: number;
 subScores: SubScores;
@@ -64,6 +72,24 @@ llmVerdict?: "BUY" | "WATCH" | "SKIP";
 llmConfidence?: number;
 llmRisk?: string;
 detectedAt: number;
+organicScore?: number;
+scoreBreakdown?: ScoreBreakdown;
+signalReason?: string;
+}
+
+export interface ScoreBreakdown {
+feeMcRatio: boolean;
+volumeTrend: boolean;
+holderCount: boolean;
+lockStatus: boolean;
+tokenAge: boolean;
+}
+
+export function getScoreLabel(score: number): { label: string; color: string } {
+if (score >= 85) return { label: "Strong Buy", color: "text-green-400" };
+if (score >= 70) return { label: "Early Entry", color: "text-blue-400" };
+if (score >= 50) return { label: "Risky", color: "text-yellow-400" };
+return { label: "Skip", color: "text-red-400" };
 }
 
 // ============================================================
@@ -151,13 +177,13 @@ let feeToMcScore = 0;
 if (mc > 0) {
 const ratio = vol1h / mc;
 if (ratio >= 0.03 && ratio <= 0.3) {
-feeToMcScore = 60; // sweet spot — organic activity
+feeToMcScore = 60; //
 } else if (ratio > 0.3 && ratio <= 0.5) {
 feeToMcScore = 40; // elevated tapi masih ok
 } else if (ratio > 0.5) {
-feeToMcScore = 10; // suspicious — wash trading?
+feeToMcScore = 10;
 } else {
-feeToMcScore = 20; // terlalu sepi
+feeToMcScore = 20;
 }
 }
 

@@ -98,11 +98,11 @@ const [loading, setLoading] = useState(false);
 
 const radarData = token
 ? [
-{ subject: "Fee/MC", value: token.scoreBreakdown.feeMcRatio ? 100 : 15 },
-{ subject: "Volume", value: token.scoreBreakdown.volumeTrend ? 100 : 15 },
-{ subject: "Holders", value: token.scoreBreakdown.holderCount ? 100 : 15 },
-{ subject: "Lock", value: token.scoreBreakdown.lockStatus ? 100 : 15 },
-{ subject: "Age", value: token.scoreBreakdown.tokenAge ? 100 : 15 },
+{ subject: "Fee/MC", value: token.scoreBreakdown?.feeMcRatio ? 100 : 15 },
+{ subject: "Volume", value: token.scoreBreakdown?.volumeTrend ? 100 : 15 },
+{ subject: "Holders", value: token.scoreBreakdown?.holderCount ? 100 : 15 },
+{ subject: "Lock", value: token.scoreBreakdown?.lockStatus ? 100 : 15 },
+{ subject: "Age", value: token.scoreBreakdown?.tokenAge ? 100 : 15 },
 ]
 : [];
 
@@ -270,8 +270,8 @@ d.value >= 80 ? "text-green-400" : "text-red-400"
 <span className="text-xs text-zinc-500">Score</span>
 <span className={clsx(
 "text-lg font-bold",
-token.organicScore >= 70 ? "text-green-400" :
-token.organicScore >= 45 ? "text-yellow-400" : "text-red-400"
+(token.organicScore ?? 0) >= 70 ? "text-green-400" :
+(token.organicScore ?? 0) >= 45 ? "text-yellow-400" : "text-red-400"
 )}>
 {token.organicScore}/100
 </span>
@@ -307,9 +307,9 @@ onClick={handleExecute}
 disabled={loading}
 className={clsx(
 "flex-1 font-semibold",
-token.organicScore >= 70
+(token.organicScore ?? 0) >= 70
 ? "bg-green-500 hover:bg-green-600 text-black"
-: token.organicScore >= 45
+: (token.organicScore ?? 0) >= 45
 ? "bg-yellow-500 hover:bg-yellow-600 text-black"
 : "bg-zinc-700 hover:bg-zinc-600 text-zinc-300"
 )}

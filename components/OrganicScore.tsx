@@ -68,12 +68,12 @@ value
 ) : (
 <XCircle className="w-3 h-3" />
 )}
-<span>{breakdownLabels[key as keyof ScoreBreakdown]}</span>
+<span>{breakdownLabels[key as keyof typeof breakdownLabels]}</span>
 </div>
 </TooltipTrigger>
 <TooltipContent>
 <p className="text-xs">
-{breakdownLabels[key as keyof ScoreBreakdown]}:{" "}
+{breakdownLabels[key as keyof typeof breakdownLabels]}:{" "}
 {value ? "✅ Pass" : "❌ Fail"}
 </p>
 </TooltipContent>
