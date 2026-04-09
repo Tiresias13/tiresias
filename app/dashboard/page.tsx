@@ -53,6 +53,7 @@ amountSol: number;
 openedAt: number;
 pnlPercent: number;
 pnlSol: number;
+entryVolume: number;
 }
 
 interface SmartWallet {
@@ -73,6 +74,7 @@ openedAt: number;
 closedAt: number;
 pnlPercent: number;
 pnlSol: number;
+closeReason?: "TP" | "SL" | "VOL" | "PARTIAL_TP" | "MANUAL";
 }
 
 function formatAge(launchAt: number): string {
@@ -723,13 +725,19 @@ const { connection } = useConnection();
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [scanCount, setScanCount] = useState(0);
   const [signalCount, setSignalCount] = useState(0);
+  const [consecutiveLoss, setConsecutiveLoss] = useState(0);
+  const [maxPositions, setMaxPositions] = useState(3);
+  const [partialTpEnabled, setPartialTpEnabled] = useState(true);
+  const [partialTpPercent, setPartialTpPercent] = useState(100);
+  const [autoPaused, setAutoPaused] = useState(false);
+  const autoPausedRef = useRef(false);
   const [showSettings, setShowSettings] = useState(false);
   const [alertEntry, setAlertEntry] = useState<LogEntry | null>(null);
   const [alertCountdown, setAlertCountdown] = useState(0);
   const [minScore, setMinScore] = useState(65);
   const [amountSol, setAmountSol] = useState(0.1);
-  const [tpPercent, setTpPercent] = useState(50);
-  const [slPercent, setSlPercent] = useState(20);
+  const [tpPercent, setTpPercent] = useState(1);
+  const [slPercent, setSlPercent] = useState(1);
   
   // Load trade history from Supabase when wallet connect
         useEffect(() => {
@@ -785,62 +793,154 @@ saveSettings();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const alertTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-// Price polling untuk open positions
 useEffect(() => {
 if (positions.length === 0) return;
 
 const pollPrices = async () => {
+const toClose: { index: number; reason: "TP" | "SL" | "VOL" | "PARTIAL_TP" }[] = [];
+
+const updated = positions.map((pos, i) => {
+let newPrice = pos.token.current_price_usd;
+
 if (isDemoMode) {
-// Simulasi price movement di demo
-setPositions((prev) => prev.map((pos) => {
 const change = (Math.random() - 0.48) * 0.06;
-const newPrice = pos.token.current_price_usd * (1 + change);
+newPrice = pos.token.current_price_usd * (1 + change);
+} else {
+// Live mode — from AVE (async, handle separated)
+return pos;
+}
+
 const pnlPercent = pos.entryPrice > 0
 ? ((newPrice - pos.entryPrice) / pos.entryPrice) * 100
 : 0;
+const pnlSol = pos.amountSol * (pnlPercent / 100);
+
+// Check TP/SL
+if (pnlPercent >= tpPercent) {
+toClose.push({ index: i, reason: "TP" });
+} else if (partialTpEnabled && pnlPercent >= partialTpPercent) {
+toClose.push({ index: i, reason: "PARTIAL_TP" });
+}
+else if (pnlPercent <= -slPercent) {
+toClose.push({ index: i, reason: "SL" });
+}
+
+// Volume drop check ← TAMBAH DI SINI
+const currentVol = pos.token.token_tx_volume_usd_5m || 0;
+const entryVol = pos.entryVolume || 0;
+const volDropped = entryVol > 0 && currentVol < entryVol * 0.5;
+
+if (volDropped && pnlPercent > -slPercent) {
+toClose.push({ index: i, reason: "VOL" });
+}
+
 return {
 ...pos,
 token: { ...pos.token, current_price_usd: newPrice },
 pnlPercent,
-pnlSol: pos.amountSol * (pnlPercent / 100),
+pnlSol,
 };
+});
 
-}));
-} else {
-// Live mode — fetch harga real dari AVE
-const updated = await Promise.all(
-positions.map(async (pos) => {
-try {
-const tokenAddress = pos.token.token.includes("-")
-? pos.token.token.split("-")[0]
-: pos.token.token;
-const chain = pos.token.chain || "solana";
-const data = await fetchEnrichedToken(tokenAddress, chain);
-if (!data) return pos;
-const currentPrice = data.current_price_usd;
-const pnlPercent = pos.entryPrice > 0
-? ((currentPrice - pos.entryPrice) / pos.entryPrice) * 100
-: 0;
-return {
-...pos,
-token: { ...pos.token, current_price_usd: currentPrice },
-pnlPercent,
-pnlSol: pos.amountSol * (pnlPercent / 100),
-};
-
-} catch {
-return pos;
-}
-})
-);
 setPositions(updated);
+
+// Auto-close positions TP/SL
+if (toClose.length > 0) {
+toClose.reverse().forEach(({ index, reason }) => {
+const pos = updated[index];
+const trade = {
+id: `${pos.token.token}-${Date.now()}`,
+token_address: pos.token.token,
+token_symbol: pos.token.symbol,
+entry_price: pos.entryPrice,
+exit_price: pos.token.current_price_usd,
+amount_sol: pos.amountSol,
+pnl_percent: pos.pnlPercent,
+pnl_sol: pos.pnlSol,
+opened_at: pos.openedAt,
+closed_at: Math.floor(Date.now() / 1000),
+close_reason: reason,
+};
+
+setTradeHistory((prev) => [...prev, {
+id: trade.id,
+token: pos.token,
+entryPrice: trade.entry_price,
+exitPrice: trade.exit_price,
+amountSol: trade.amount_sol,
+openedAt: trade.opened_at,
+closedAt: trade.closed_at,
+pnlPercent: trade.pnl_percent,
+pnlSol: trade.pnl_sol,
+closeReason: reason,
+}]);
+
+if (publicKey && !isDemoMode) {
+supabase.from("trade_history").insert({
+...trade,
+wallet_address: publicKey.toString(),
+});
+}
+
+// Partial TP — close 50%, re-enter sisanya dengan entry price baru
+if (reason === "PARTIAL_TP") {
+const halfAmount = pos.amountSol / 2;
+
+// Catat partial close ke history
+setTradeHistory((prev) => [...prev, {
+id: `${pos.token.token}-partial-${Date.now()}`,
+token: pos.token,
+entryPrice: pos.entryPrice,
+exitPrice: pos.token.current_price_usd,
+amountSol: halfAmount,
+openedAt: pos.openedAt,
+closedAt: Math.floor(Date.now() / 1000),
+pnlPercent: pos.pnlPercent,
+pnlSol: halfAmount * (pos.pnlPercent / 100),
+closeReason: "PARTIAL_TP",
+}]);
+
+// Update position — kurangi amount, reset entry ke harga sekarang
+setPositions((prev) => prev.map((p, idx) =>
+idx === index ? {
+...p,
+amountSol: halfAmount,
+entryPrice: pos.token.current_price_usd,
+pnlPercent: 0,
+pnlSol: 0,
+} : p
+));
+
+console.log(`Partial TP: ${pos.token.symbol} — closed 50% at ${pos.pnlPercent.toFixed(1)}%`);
+return; // jangan hapus position, jangan filter
+}
+
+          if (reason === "SL") {
+          setConsecutiveLoss((prev) => {
+          const next = prev + 1;
+          if (next >= 3) {
+          autoPausedRef.current = true;
+          setAutoPaused(true);
+          console.log("3x consecutive loss — auto-buy paused");
+          }
+          return next;
+          });
+          } else if (reason === "TP") {
+          setConsecutiveLoss(0); // reset if profit
+          }
+
+setPositions((prev) => prev.filter((_, idx) => idx !== index));
+
+console.log(`Auto-close ${pos.token.symbol}: ${reason} hit at ${pos.pnlPercent.toFixed(1)}%`);
+});
 }
 };
 
 pollPrices();
 const priceInterval = setInterval(pollPrices, 5_000);
 return () => clearInterval(priceInterval);
-}, [positions.length, isDemoMode]);
+}, [positions.length, isDemoMode, tpPercent, slPercent]);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem("tiresias_logs");
@@ -902,24 +1002,55 @@ return () => clearInterval(priceInterval);
       };
 
       if (entry.action === "signal") {
-        setSignalCount((c) => c + 1);
-        if (agentMode === "auto" && !isDemoMode && connected && publicKey && signTransaction) {
-          setAgentStatus("acting");
-          const quote = await getSwapQuote(token.token, amountSol);
-          if (quote) {
-            const result = await executeSwap(quote, publicKey, signTransaction, connection);
-            if (result.success) {
-              entry.action = "executed";
-              entry.txid = result.txid || undefined;
-              setPositions((prev) => [...prev, {
-                token, entryPrice: token.current_price_usd,
-                amountSol, openedAt: Math.floor(Date.now() / 1000), pnlPercent: 0,
-              }]);
-            }
-          }
-          setAgentStatus("judging");
+      setSignalCount((c) => c + 1);
+      if (agentMode === "auto" && !autoPausedRef.current && (isDemoMode || (connected && publicKey && signTransaction))) {
+        if (positions.length >= maxPositions) {
+        console.log(`Max positions reached: ${positions.length}/${maxPositions}`);
+        continue;
         }
-      }
+        setAgentStatus("acting");
+
+                    if (isDemoMode) {
+                    // Demo mode
+                    entry.action = "executed";
+                    setPositions((prev) => [...prev, {
+                    token, entryPrice: token.current_price_usd,
+                    amountSol, openedAt: Math.floor(Date.now() / 1000),
+                    pnlPercent: 0, pnlSol: 0,
+                    entryVolume: token.token_tx_volume_usd_5m || 0,
+                    }]);
+                   } else {
+                    // Live mode — balance check first
+                    const balance = await connection.getBalance(publicKey!);
+                    const balanceSol = balance / 1e9;
+
+                    if (balanceSol < amountSol + 0.01) {
+                    console.log(`Insufficient balance: ${balanceSol.toFixed(3)} SOL, need ${(amountSol + 0.01).toFixed(3)} SOL`);
+                    setAgentStatus("judging");
+                    continue;
+                    }
+
+                    // Execute swap
+                    const quote = await getSwapQuote(token.token, amountSol);
+
+                    if (quote) {
+                    const result = await executeSwap(quote, publicKey!, signTransaction!, connection);
+                    if (result.success) {
+                    entry.action = "executed";
+                    entry.txid = result.txid || undefined;
+                    setPositions((prev) => [...prev, {
+                    token, entryPrice: token.current_price_usd,
+                    amountSol, openedAt: Math.floor(Date.now() / 1000),
+                    pnlPercent: 0, pnlSol: 0,
+                    entryVolume: token.token_tx_volume_usd_5m || 0,
+
+                    }]);
+                    }
+                    }
+                    }
+                    setAgentStatus("judging");
+                    }
+              }
 
       if (entry.action === "signal" || entry.action === "executed") {
         fetchLLMInsight(token).then((result) => {
@@ -963,6 +1094,10 @@ return () => clearInterval(priceInterval);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isRunning, runScanCycle]);
 
+  useEffect(() => {
+autoPausedRef.current = autoPaused;
+}, [autoPaused]);
+
 const handleAlertBuy = async () => {
 if (!alertEntry) return;
 setAlertEntry(null);
@@ -974,7 +1109,8 @@ e.id === alertEntry.id ? { ...e, action: "executed" as const } : e
 ));
 setPositions((prev) => [...prev, {
 token: alertEntry.token, entryPrice: alertEntry.token.current_price_usd,
-amountSol, openedAt: Math.floor(Date.now() / 1000), pnlPercent: 0,
+amountSol, openedAt: Math.floor(Date.now() / 1000), pnlPercent: 0, pnlSol: 0,
+entryVolume: token.token_tx_volume_usd_5m || 0,
 }]);
 return;
 }
@@ -1007,7 +1143,8 @@ e.id === alertEntry.id ? { ...e, action: "executed" as const } : e
 ));
 setPositions((prev) => [...prev, {
 token: alertEntry.token, entryPrice: alertEntry.token.current_price_usd,
-amountSol, openedAt: Math.floor(Date.now() / 1000), pnlPercent: 0,
+amountSol, openedAt: Math.floor(Date.now() / 1000), pnlPercent: 0, pnlSol: 0,
+entryVolume: token.token_tx_volume_usd_5m || 0,
 }]);
 console.log("Swap success:", result.txid);
 } else {
@@ -1056,6 +1193,19 @@ return(
             {agentStatus !== "idle" && isRunning && (
               <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />
             )}
+            {autoPaused && (
+                <span className="text-xs font-bold text-zinc-400 border border-zinc-300 px-2 py-0.5">
+                PAUSED — 3x LOSS
+                </span>
+                )}
+                {autoPaused && (
+                <button
+                onClick={() => { setAutoPaused(false); setConsecutiveLoss(0); }}
+                className="text-xs text-zinc-400 hover:text-black underline"
+                >
+                Resume
+                </button>
+                )}
           </div>
 
           <div className="w-px h-4 bg-zinc-200" />
@@ -1094,29 +1244,35 @@ return(
           <WalletButton />
         </header>
 
-        {showSettings && (
-          <div className="flex-shrink-0 border-b border-zinc-200 bg-zinc-50 px-6 py-3 flex items-center gap-8 flex-wrap">
-            {[
-              { label: "MIN SCORE", values: [50, 65, 75, 85], current: minScore, set: setMinScore },
-              { label: "AMOUNT SOL", values: [0.05, 0.1, 0.25, 0.5], current: amountSol, set: setAmountSol },
-              { label: "TP%", values: [25, 50, 100, 200], current: tpPercent, set: setTpPercent },
-              { label: "SL%", values: [10, 20, 30, 50], current: slPercent, set: setSlPercent },
-            ].map(({ label, values, current, set }) => (
-              <div key={label} className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400">{label}</span>
-                {values.map((v) => (
-                  <button key={v} onClick={() => set(v as any)}
-                    className={clsx("px-2 py-1 text-xs font-mono border transition-colors",
-                      current === v ? "border-black text-black" : "border-zinc-200 text-zinc-400 hover:text-black"
-                    )}>
-                    {v}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
+       {showSettings && (
+<div className="flex-shrink-0 border-b border-zinc-200 bg-zinc-50 px-6 py-3 flex items-center gap-8 flex-wrap">
+{[
+{ label: "MIN SCORE", values: [50, 65, 75, 85], current: minScore, set: setMinScore },
+{ label: "AMOUNT SOL", values: [0.05, 0.1, 0.25, 0.5], current: amountSol, set: setAmountSol },
+{ label: "TP%", values: [25, 50, 100, 200], current: tpPercent, set: setTpPercent },
+{ label: "SL%", values: [10, 20, 30, 50], current: slPercent, set: setSlPercent },
+{ label: "MAX POS", values: [1, 2, 3, 5], current: maxPositions, set: setMaxPositions },
+].map(({ label, values, current, set }) => (
+<div key={label} className="flex items-center gap-2">
+<span className="text-xs text-zinc-400">{label}</span>
+{values.map((v) => (
+<button key={v} onClick={() => set(v as any)}
+className={clsx("px-2 py-1 text-xs font-mono border transition-colors",
+current === v ? "border-black text-black" : "border-zinc-200 text-zinc-400 hover:text-black"
+)}>
+{v}
+</button>
+))}
+</div>
+))}
 
+<div className="flex items-center gap-2">
+<span className="text-xs text-zinc-400">PARTIAL TP</span>
+<Switch checked={partialTpEnabled} onCheckedChange={setPartialTpEnabled}
+className="data-[state=checked]:bg-black data-[state=unchecked]:bg-zinc-300 border border-black" />
+</div>
+</div>
+)}
         <div className="flex-1 relative overflow-hidden">
           {allClosed && (
             <div className="absolute inset-0 flex flex-col items-center justify-center select-none pointer-events-none">
@@ -1190,7 +1346,7 @@ return(
 
                       setPositions((prev) => prev.filter((_, idx) => idx !== i));
                       }}
-                      
+
                       />
                       </FloatingWindow>
 
