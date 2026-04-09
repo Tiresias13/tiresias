@@ -1110,7 +1110,7 @@ e.id === alertEntry.id ? { ...e, action: "executed" as const } : e
 setPositions((prev) => [...prev, {
 token: alertEntry.token, entryPrice: alertEntry.token.current_price_usd,
 amountSol, openedAt: Math.floor(Date.now() / 1000), pnlPercent: 0, pnlSol: 0,
-entryVolume: token.token_tx_volume_usd_5m || 0,
+entryVolume: alertEntry.token.token_tx_volume_usd_5m || 0,
 }]);
 return;
 }
