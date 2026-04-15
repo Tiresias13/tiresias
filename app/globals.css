@@ -2,26 +2,133 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+* {
+box-sizing: border-box;
+padding: 0;
+margin: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+background-color: #0A0A0A;
+color: #F5F5F5;
+font-family: var(--font-inter);
+overflow-x: hidden;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Scrollbar */
+::-webkit-scrollbar {
+width: 4px;
+}
+::-webkit-scrollbar-track {
+background: #111111;
+}
+::-webkit-scrollbar-thumb {
+background: #2A2A2A;
+border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+background: #444;
+}
+
+/* Glitch skeleton animation */
+@keyframes glitch-base {
+0%, 100% { background-position: 0 0; }
+25% { background-position: 2px 0; }
+50% { background-position: -2px 0; }
+75% { background-position: 1px 0; }
+}
+
+@keyframes glitch-clip {
+0% { clip-path: inset(0 0 95% 0); transform: translateX(-2px); opacity: 0.4; }
+10% { clip-path: inset(15% 0 70% 0); transform: translateX(2px); opacity: 0.6; }
+20% { clip-path: inset(40% 0 40% 0); transform: translateX(-1px); opacity: 0.3; }
+30% { clip-path: inset(60% 0 20% 0); transform: translateX(3px); opacity: 0.7; }
+40% { clip-path: inset(80% 0 5% 0); transform: translateX(-2px); opacity: 0.5; }
+50% { clip-path: inset(0 0 0 0); transform: translateX(0); opacity: 1; }
+60% { clip-path: inset(20% 0 60% 0); transform: translateX(1px); opacity: 0.4; }
+70% { clip-path: inset(50% 0 30% 0); transform: translateX(-3px); opacity: 0.6; }
+80% { clip-path: inset(70% 0 10% 0); transform: translateX(2px); opacity: 0.3; }
+90% { clip-path: inset(90% 0 2% 0); transform: translateX(-1px); opacity: 0.5; }
+100% { clip-path: inset(0 0 95% 0); transform: translateX(-2px); opacity: 0.4; }
+}
+
+@keyframes accent-flash {
+0%, 89%, 100% { opacity: 0; }
+90%, 95% { opacity: 0.15; }
+}
+
+.skeleton-glitch {
+position: relative;
+background: linear-gradient(90deg, #111111 25%, #1A1A1A 50%, #111111 75%);
+background-size: 200% 100%;
+animation: glitch-base 1.2s ease-in-out infinite;
+overflow: hidden;
+border-radius: 4px;
+}
+
+.skeleton-glitch::before {
+content: '';
+position: absolute;
+inset: 0;
+background: linear-gradient(90deg, #1A1A1A, #222222, #1A1A1A);
+animation: glitch-clip 1.2s steps(1) infinite;
+}
+
+.skeleton-glitch::after {
+content: '';
+position: absolute;
+inset: 0;
+background-color: #E8FF47;
+animation: accent-flash 1.2s ease-in-out infinite;
+}
+
+/* Glitch text for 404 */
+@keyframes glitch-text-1 {
+0%, 100% { clip-path: inset(0 0 100% 0); transform: translateX(0); }
+20% { clip-path: inset(10% 0 60% 0); transform: translateX(-4px); }
+40% { clip-path: inset(50% 0 30% 0); transform: translateX(4px); }
+60% { clip-path: inset(70% 0 10% 0); transform: translateX(-2px); }
+80% { clip-path: inset(30% 0 50% 0); transform: translateX(2px); }
+}
+
+@keyframes glitch-text-2 {
+0%, 100% { clip-path: inset(0 0 100% 0); transform: translateX(0); }
+20% { clip-path: inset(60% 0 10% 0); transform: translateX(4px); }
+40% { clip-path: inset(20% 0 50% 0); transform: translateX(-4px); }
+60% { clip-path: inset(40% 0 30% 0); transform: translateX(2px); }
+80% { clip-path: inset(80% 0 5% 0); transform: translateX(-2px); }
+}
+
+.glitch-text {
+position: relative;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+content: attr(data-text);
+position: absolute;
+top: 0; left: 0;
+width: 100%; height: 100%;
+}
+
+.glitch-text::before {
+color: #E8FF47;
+animation: glitch-text-1 2.5s infinite;
+}
+
+.glitch-text::after {
+color: #818CF8;
+animation: glitch-text-2 2.5s infinite 0.1s;
+}
+
+/* Noise texture for 404 */
+.noise-bg::before {
+content: '';
+position: fixed;
+inset: 0;
+background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+pointer-events: none;
+z-index: 0;
+opacity: 0.4;
 }
