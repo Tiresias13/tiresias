@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TIRESIAS
 
-## Getting Started
+**On-chain wallet intelligence for Solana & BSC.**
 
-First, run the development server:
+> "See the pattern behind the profit."
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## What it does
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+TIRESIAS analyzes on-chain wallet behavior and tells you:
+- Is this wallet a human or a machine?
+- What's their trading pattern?
+- Should you follow, watch, or avoid?
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Features
 
-## Learn More
+- **Leaderboard** — Top performing wallets ranked by TS Score
+- **Wallet Profile** — Deep behavioral analysis with AI detection
+- **Signals** — Live wallet activity feed
+- **Explorer** — Browse wallets by agent classification
 
-To learn more about Next.js, take a look at the following resources:
+## Agent Classifications
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- ⚡ **Sniper** — High timing edge, fast entries
+- 🟢 **Smart Money** — Consistent profits, high behavioral accuracy
+- 🟡 **Momentum Follower** — Rides trends, low timing edge
+- 🔴 **Exit Liquidity** — Low win rate, likely absorbing sell pressure
+- 🧬 **Silent Accumulator** — Gradual entry, long holding pattern
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Stack
 
-## Deploy on Vercel
+Next.js 14 · TypeScript · Tailwind CSS · Supabase · AVE API · Helius · Groq
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built by [Tiresias](https://tiresias.vercel.app)
+
+## Scoring Formula
+
+**TS Score = (0.25 × PQ) + (0.20 × TE) + (0.15 × BC) + (0.15 × SI) + (0.15 × NI) − (0.10 × RS)**
+
+| Component | Weight | Description |
+|-----------|--------|-------------|
+| PQ — Profit Quality | 25% | Win rate + ROI consistency |
+| TE — Timing Edge | 20% | Entry timing relative to market moves |
+| BC — Behavioral Consistency | 15% | Variance in buy/sell patterns |
+| SI — Strategy Identity | 15% | Token concentration & focus |
+| NI — Network Influence | 15% | Volume & unique token interaction breadth |
+| RS — Risk Score | -10% | Honeypot interactions, scam contracts |
+
+### AI Detection
+
+Composite probability score (0–100%) based on 5 behavioral signals:
+1. Execution timing variance
+2. 24h activity heatmap uniformity
+3. Reaction speed to on-chain events
+4. Gas optimization patterns
+5. Token interaction breadth
+
+*Scores are probabilistic, not deterministic.*
