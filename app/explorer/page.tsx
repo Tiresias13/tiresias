@@ -1,14 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { getAgentColor, getAgentLabel, getAgentEmoji } from '@/lib/scoring'
 import { truncateAddress } from '@/lib/utils'
-import { SEED_WALLETS } from '@/lib/seed-wallets'
 import AgentBadge from '@/components/AgentBadge'
 import ChainBadge from '@/components/ChainBadge'
 import AIProbabilityBadge from '@/components/AIProbabilityBadge'
 import EmptyState from '@/components/EmptyState'
+import { LeaderboardSkeleton } from '@/components/SkeletonGlitch'
 
 const AGENT_TYPES = [
 'smart-money',
@@ -18,19 +18,32 @@ const AGENT_TYPES = [
 'exit-liq',
 ] as const
 
-const MOCK_EXPLORER = SEED_WALLETS.map((w, i) => ({
-address: w.address,
-chain: w.chain,
-score: 96 - i * 7,
-agentType: ['smart-money', 'sniper', 'smart-money', 'accumulator', 'momentum', 'smart-money', 'sniper', 'accumulator', 'exit-liq', 'momentum'][i] as any,
-aiProbability: w.isAiAgent ? 78 + i * 2 : 15 + i * 3,
-winRate: [0.84, 0.67, 0.81, 0.69, 0.52, 0.73, 0.63, 0.62, 0.29, 0.51][i],
-}))
+interface ExplorerWallet {
+address: string
+chain: string
+score: number
+agent_type: string
+ai_probability: number
+win_rate: number
+}
 
 export default function ExplorerPage() {
 const [activeType, setActiveType] = useState<string>('smart-money')
+const [wallets, setWallets] = useState<ExplorerWallet[]>([])
+const [loading, setLoading] = useState(true)
 
-const filtered = MOCK_EXPLORER.filter((w) => w.agentType === activeType)
+useEffect(() => {
+setLoading(true)
+fetch('/api/leaderboard?limit=100')
+.then((r) => r.ok ? r.json() : [])
+.then((data) => {
+setWallets(Array.isArray(data) ? data : [])
+setLoading(false)
+})
+.catch(() => setLoading(false))
+}, [])
+
+const filtered = wallets.filter((w) => (w.agent_type ?? 'momentum') === activeType)
 return (
 <div className="max-w-7xl mx-auto px-4 py-10 space-y-8">
 
@@ -76,15 +89,17 @@ borderColor: `${getAgentColor(activeType as any)}20`,
 </div>
 
 {/* Grid */}
-{filtered.length === 0 ? (
+{loading ? (
+<LeaderboardSkeleton />
+) : filtered.length === 0 ? (
 <EmptyState type="explorer" />
 ) : (
 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 {filtered.map((wallet) => (
-<Link href={`/wallet/${wallet.address}`} key={wallet.address}>
+<Link href={`/wallet/${wallet.address}?chain=${wallet.chain}`} key={wallet.address}>
 <div
 className="bg-surface border border-border rounded-card p-4 hover:border-[#444] transition-colors group h-full"
-style={{ borderLeft: `3px solid ${getAgentColor(wallet.agentType)}` }}
+style={{ borderLeft: `3px solid ${getAgentColor(wallet.agent_type as any)}` }}
 >
 <div className="flex items-start justify-between mb-3">
 <div className="space-y-1.5">
@@ -93,7 +108,7 @@ style={{ borderLeft: `3px solid ${getAgentColor(wallet.agentType)}` }}
 </p>
 <div className="flex items-center gap-1.5 flex-wrap">
 <ChainBadge chain={wallet.chain} size="sm" />
-<AgentBadge type={wallet.agentType} size="sm" />
+<AgentBadge type={wallet.agent_type as any} size="sm" />
 </div>
 </div>
 <div className="text-right">
@@ -107,9 +122,9 @@ style={{ color: wallet.score >= 70 ? '#4ADE80' : wallet.score >= 45 ? '#FACC15' 
 </div>
 </div>
 <div className="flex items-center justify-between">
-<AIProbabilityBadge probability={wallet.aiProbability} />
+<AIProbabilityBadge probability={wallet.ai_probability ?? 0} />
 <span className="text-xs text-text-secondary font-inter">
-Win rate: <span className="text-text-primary">{(wallet.winRate * 100).toFixed(0)}%</span>
+Win rate: <span className="text-text-primary">{((wallet.win_rate ?? 0) * 100).toFixed(0)}%</span>
 </span>
 </div>
 </div>
@@ -144,8 +159,7 @@ function getAgentDescription(type: string): string {
 const desc: Record<string, string> = {
 'smart-money': 'These are the ones. High PQ, clean exits, early entries. They were in before you knew the token existed. Watch every move.',
 'sniper': 'First in. Always. Sub-5-minute entries after launch, high win rate, out before the crowd even notices. Half of them are probably machines.',
-'accumulator': 'They don\'t rush. Weeks, months — slow position building while everyone else is chasing pumps. Underestimate them at your own expense.',
-'momentum': 'They ride waves. Not the ones creating them. Profitable when the trend is strong, wrecked when it turns. Useful signal, not gospel.',
+'accumulator': 'They don\'t rush. Weeks, months — slow position building while everyone else is chasing pumps. Underestimate them at your own expense.','momentum': 'They ride waves. Not the ones creating them. Profitable when the trend is strong, wrecked when it turns. Useful signal, not gospel.',
 'exit-liq': 'You are the exit. Every time you buy what they\'re selling, they win. Low PQ, late entries, no edge. Do not follow. Do not copy. Just don\'t.',
 }
 return desc[type] ?? ''
