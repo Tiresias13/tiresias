@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import ScoreArc from '@/components/ScoreArc'
 import AgentBadge from '@/components/AgentBadge'
@@ -109,6 +109,8 @@ className="text-accent hover:underline font-mono"
 
 export default function WalletProfilePage() {
 const { address } = useParams<{ address: string }>()
+const searchParams = useSearchParams()
+const chain = searchParams.get('chain') ?? 'SOL'
 const [data, setData] = useState<ScoringResult | null>(null)
 const [loading, setLoading] = useState(true)
 const [error, setError] = useState(false)
@@ -125,7 +127,7 @@ fetch(`/api/history/${address}`)
 .then((h) => setHistory(Array.isArray(h) ? h : []))
 .catch(() => {})
 
-fetch(`/api/wallet/${address}?chain=SOL`)
+fetch(`/api/wallet/${address}?chain=${chain}&refresh=true`)
 .then((res) => {
 if (!res.ok) throw new Error('Not found')
 return res.json()

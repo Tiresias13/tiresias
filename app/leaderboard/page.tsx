@@ -11,7 +11,6 @@ import { LeaderboardSkeleton } from '@/components/SkeletonGlitch'
 const CHAINS = [
 { value: 'SOL', label: 'SOL', aveChain: 'solana' },
 { value: 'BSC', label: 'BSC', aveChain: 'bsc' },
-{ value: 'BASE', label: 'BASE', aveChain: 'base' },
 ] as const
 
 const AGENT_FILTERS = [
@@ -107,6 +106,15 @@ hero
 )}
 </button>
 ))}
+<button
+disabled
+className="px-4 py-1.5 rounded text-sm font-inter font-medium opacity-30 cursor-not-allowed text-text-secondary flex items-center gap-1.5"
+>
+BASE
+<span className="text-xs px-1.5 py-0.5 rounded-pill bg-surface-2 text-text-secondary border border-border">
+Soon
+</span>
+</button>
 </div>
 
 <div className="flex gap-1.5 flex-wrap">
@@ -131,13 +139,13 @@ activeAgent === f.value
 <div className="text-center py-20 text-text-secondary font-inter text-sm">
 Failed to load leaderboard. Try again.
 </div>
-) : wallets.length === 0 ? (
+) : filteredWallets.length === 0 ? (
 <div className="text-center py-20 text-text-secondary font-inter text-sm">
-No wallets found for this chain.
+{activeAgent === 'all' ? 'No wallets found for this chain.' : `No ${activeAgent} wallets found.`}
 </div>
 ) : (
 <div className="space-y-2">
-{wallets.map((wallet, i) => {
+{filteredWallets.map((wallet, i) => {
 const walletAddr = wallet.address ?? wallet.wallet_address ?? ''
 const agentType = wallet.agent_type ?? 'momentum'
 const agentColor = getAgentColor(agentType as any)
@@ -153,7 +161,7 @@ const profitDisplay = Math.abs(profit) >= 9_999_999
 : `${profit >= 0 ? '+' : ''}$${Math.abs(profit).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 
 return (
-<Link href={`/wallet/${walletAddr}`} key={walletAddr || i}>
+<Link href={`/wallet/${walletAddr}?chain=${wallet.chain}`} key={walletAddr || i}>
 <div
 className="bg-surface border border-border rounded-card p-4 hover:border-[#444] transition-colors group flex items-center gap-4"
 style={{ borderLeft: `3px solid ${agentColor}` }}
