@@ -1,4 +1,4 @@
-const HELIUS_RPC_URL = process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? ''
+const HELIUS_RPC_URL = process.env.HELIUS_RPC_URL ?? ''
 const HELIUS_API_KEY = HELIUS_RPC_URL.match(/api-key=([^&]+)/)?.[1] ?? ''
 const HELIUS_REST_URL = 'https://api.helius.xyz'
 
