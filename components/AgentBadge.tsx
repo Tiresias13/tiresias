@@ -1,5 +1,5 @@
 import { getAgentLabel, getAgentEmoji, getAgentColor } from '@/lib/scoring'
-import type { AgentType } from '@/lib/mock-data'
+import type { AgentType } from '@/lib/scoring'
 
 interface AgentBadgeProps {
 type: AgentType

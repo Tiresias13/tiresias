@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { truncateAddress, formatRoi, getActionColor, getActionLabel, getAgentColor } from '@/lib/scoring'
+import { getActionColor, getActionLabel, getAgentColor } from '@/lib/scoring'
+import { truncateAddress } from '@/lib/utils'
 import AgentBadge from './AgentBadge'
 import ChainBadge from './ChainBadge'
 import AIProbabilityBadge from './AIProbabilityBadge'
 import DeltaBadge from './DeltaBadge'
-import type { AgentType, Chain, ActionRec } from '@/lib/mock-data'
+import type { AgentType, ActionRec, Chain } from '@/lib/scoring'
 
 interface WalletCardProps {
 address: string

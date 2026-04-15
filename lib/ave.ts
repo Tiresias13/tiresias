@@ -170,16 +170,6 @@ BASE: 'base',
 return map[chain] ?? chain.toLowerCase()
 }
 
-// Smartwallet
-export interface AveSmartWallet {
-wallet_address: string
-chain: string
-total_profit: string
-total_win_ratio: string
-total_purchase: string
-total_sold: string
-}
-
 export async function getSmartWalletList(
 chain: string = 'solana',
 limit: number = 20

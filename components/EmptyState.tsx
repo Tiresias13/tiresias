@@ -7,7 +7,7 @@ export default function EmptyState({
 type = 'wallet',
 message,
 }: EmptyStateProps) {
-const copy = message ?? getCopy(type)
+const copy = message ? { title: message, sub: '' } : getCopy(type)
 
 return (
 <div className="flex flex-col items-center justify-center py-20 px-4 text-center">

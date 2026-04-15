@@ -1,5 +1,5 @@
 import { getConfidenceLabel, getConfidenceColor, getConfidenceTooltip } from '@/lib/scoring'
-import type { ConfidenceLevel } from '@/lib/mock-data'
+import type { ConfidenceLevel } from '@/lib/scoring'
 
 interface ConfidenceBadgeProps {
 level: ConfidenceLevel

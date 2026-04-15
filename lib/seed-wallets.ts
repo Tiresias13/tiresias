@@ -1,4 +1,4 @@
-import type { Chain } from './mock-data'
+import type { Chain } from './scoring'
 
 export interface SeedWallet {
 address: string

@@ -1,4 +1,6 @@
-import type { AgentType, ConfidenceLevel, ActionRec } from './mock-data'
+export type AgentType = 'sniper' | 'smart-money' | 'momentum' | 'exit-liq' | 'accumulator'
+export type ConfidenceLevel = 'low' | 'medium' | 'high'
+export type ActionRec = 'accumulating' | 'distributing' | 'active'
 
 export function getAgentLabel(type: AgentType): string {
 const labels: Record<AgentType, string> = {
@@ -100,3 +102,4 @@ BASE: '#0052FF',
 }
 return colors[chain] || '#888888'
 }
+export type Chain = 'SOL' | 'BSC' | 'BASE'
