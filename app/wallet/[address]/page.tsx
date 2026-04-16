@@ -57,7 +57,7 @@ Scores are probabilistic, not deterministic. A high AI probability indicates mac
 )
 }
 
-// A8: Tx timeline component
+//Tx timeline component
 function TxTimeline({ txs, chain }: { txs: TxItem[]; chain: string }) {
 if (!txs || txs.length === 0) return null
 
@@ -182,24 +182,35 @@ const topTokens = Array.isArray(data.topTokens) ? data.topTokens : []
 const explainability = Array.isArray(data.explainability) ? data.explainability : []
 const recentTxs: TxItem[] = Array.isArray((data as any).recentTxs) ? (data as any).recentTxs : []
 const isExtreme = Object.values(data.zscores ?? {}).some((z) => Math.abs(Number(z)) >= 2.0)
-return(
-// A2: OG meta — handled via generateMetadata in server component
-// For client component, inject via next/head or move to layout.
-// See note below file.
-<div className="max-w-3xl mx-auto px-4 py-10 space-y-6">
+return (
+<div className="max-w-6xl mx-auto px-4 py-10 space-y-6">
 
 {/* Back */}
 <button
 onClick={() => window.history.back()}
-className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary font-inter transition-colors mb-6"
+className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary font-inter transition-colors"
 >
 ← Back
 </button>
 
-{/* Header */}
-<div className="flex items-start justify-between gap-4">
-<div>
-<div className="flex items-center gap-2 flex-wrap mb-2">
+{/* Banners */}
+{confidenceLevel === 'low' && (
+<div className="bg-[#FACC1510] border border-[#FACC1530] rounded-card px-4 py-3 text-sm font-inter text-watch">
+⚠️ Limited data — only {txCount} transactions detected. Score accuracy is low. Treat as indicative only.
+</div>
+)}
+{isExtreme && (
+<div className="bg-[#E8FF4710] border border-[#E8FF4730] rounded-card px-4 py-3 text-sm font-inter text-accent">
+⚡ Extreme behavior detected — this wallet is a significant statistical outlier.
+</div>
+)}
+
+{/* ROW 1 — Header | Score | Action */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+{/* Col 1: Identity */}
+<div className="bg-surface border border-border rounded-card p-5 space-y-3">
+<div className="flex items-center gap-2 flex-wrap">
 <ChainBadge chain={data.chain} />
 <AgentBadge type={data.agentType as any} />
 {data.isScamContract && (
@@ -208,58 +219,51 @@ className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text
 </span>
 )}
 </div>
-<p className="font-mono text-lg text-text-primary break-all">{address}</p>
-<p className="font-mono text-sm text-text-secondary mt-1">
-{truncateAddress(address as string, 8)}
-</p>
-</div>
+<div>
+<p className="font-mono text-sm text-text-primary break-all leading-relaxed">{address}</p>
 <button
-onClick={handleShare}
-className="flex-shrink-0 px-4 py-2 rounded-card border border-border text-sm font-inter text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
+onClick={() => { navigator.clipboard.writeText(address as string); toast('Address copied.', { duration: 2000 }) }}
+className="text-xs text-text-secondary hover:text-accent font-inter mt-1 transition-colors"
 >
-{copied ? '✓ Copied' : '↗ Share'}
+Copy address
 </button>
 </div>
-
-{/* Low confidence disclaimer */}
-{confidenceLevel === 'low' && (
-<div className="bg-[#FACC1510] border border-[#FACC1530] rounded-card px-4 py-3 text-sm font-inter text-watch">
-⚠️ Limited data — only {txCount} transactions detected. Score accuracy is low. Treat as indicative only.
-</div>
-)}
-
-{/* Extreme signal banner */}
-{isExtreme && (
-<div className="bg-[#E8FF4710] border border-[#E8FF4730] rounded-card px-4 py-3 text-sm font-inter text-accent">
-⚡ Extreme behavior detected — this wallet is a significant statistical outlier.
-</div>
-)}
-
-{/* Score card */}
-<div className="bg-surface border border-border rounded-card p-6">
-<div className="flex items-center gap-6 flex-wrap">
-<ScoreArc score={data.score} size={130} />
-<div className="flex-1 space-y-3">
+<div className="pt-2 border-t border-border">
 <ConfidenceBadge level={confidenceLevel} txCount={txCount} />
 <DeltaBadge
 delta={data.deltaScore}
 prevAgentType={data.prevAgentType}
 currentAgentType={data.agentType}
 />
-<AIProbabilityBadge
-probability={data.aiDetection?.probability ?? 0}
-signals={data.aiDetection?.signals}
-frameworks={data.aiDetection?.githubSignal?.frameworks}
-/>
-{/* A7: accordion */}
-<AiDetectionAccordion />
-<div className="flex gap-4 text-sm font-inter flex-wrap">
+</div>
+<div className="flex gap-2">
+<button
+onClick={handleShare}
+className="flex-1 px-4 py-2 rounded-card border border-border text-sm font-inter text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
+>
+{copied ? '✓ Copied' : '↗ Share'}
+</button>
+<a
+href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`🔍 Wallet Intel by Tiresias\n\nScore: ${data.score} | ${data.agentType ? data.agentType.replace('-', ' ') : ''} | AI Prob: ${data.aiDetection?.probability ?? 0}%\nWin Rate: ${(Number(data.winRate) * 100).toFixed(0)}% | PnL: +$${Number(data.totalProfit).toLocaleString('en-US', { maximumFractionDigits: 0 })}\n\nSee the pattern behind the profit 👇`)}&url=${encodeURIComponent(`https://tiresiasave.vercel.app/wallet/${address}`)}`}
+target="_blank"
+rel="noopener noreferrer"
+className="flex-1 px-4 py-2 rounded-card border border-border text-sm font-inter text-center text-text-secondary hover:text-text-primary hover:border-[#1DA1F2] transition-colors"
+>
+𝕏 Post
+</a>
+</div>
+</div>
+
+{/* Col 2: Score */}
+<div className="bg-surface border border-border rounded-card p-5 flex flex-col items-center justify-center space-y-4">
+<ScoreArc score={data.score} size={130} />
+<div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm font-inter w-full">
 <div>
 <p className="text-text-secondary text-xs">Win Rate</p>
 <p className="text-text-primary font-medium">{(winRate * 100).toFixed(0)}%</p>
 </div>
 <div>
-<p className="text-text-secondary text-xs">Total PnL (USD)</p>
+<p className="text-text-secondary text-xs">Total PnL</p>
 <p className="font-medium" style={{ color: totalProfit >= 0 ? '#4ADE80' : '#F87171' }}>
 {totalProfit >= 0 ? '+' : ''}${totalProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
 </p>
@@ -270,40 +274,43 @@ frameworks={data.aiDetection?.githubSignal?.frameworks}
 </div>
 <div>
 <p className="text-text-secondary text-xs">Percentile</p>
-<p className="text-text-primary font-medium">
-Top {Math.round((1 - data.score / 100) * 100)}%
-</p>
+<p className="text-text-primary font-medium">Top {Math.round((1 - data.score / 100) * 100)}%</p>
 </div>
-<div>
+<div className="col-span-2">
 <p className="text-text-secondary text-xs">Top Tokens</p>
-<p className="text-text-primary font-medium font-mono text-xs">
-{topTokens.slice(0, 3).join(', ') || '—'}
-</p>
-</div>
-</div>
+<p className="text-text-primary font-medium font-mono text-xs">{topTokens.slice(0, 3).join(', ') || '—'}</p>
 </div>
 </div>
 </div>
 
-{/* Action Recommendation */}
+{/* Col 3: Action + AI */}
+<div className="space-y-4">
 <div
 className="rounded-card p-4 border"
-style={{
-backgroundColor: `${actionColor}10`,
-borderColor: `${actionColor}30`,
-}}
+style={{ backgroundColor: `${actionColor}10`, borderColor: `${actionColor}30` }}
 >
 <div className="flex items-center gap-2 mb-1">
 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: actionColor }} />
-<span className="font-syne font-semibold text-sm" style={{ color: actionColor }}>
-{actionLabel}
-</span>
+<span className="font-syne font-semibold text-sm" style={{ color: actionColor }}>{actionLabel}</span>
 </div>
 <p className="text-sm font-inter text-text-secondary">{actionDesc}</p>
 </div>
+<div className="bg-surface border border-border rounded-card p-4 space-y-2">
+<AIProbabilityBadge
+probability={data.aiDetection?.probability ?? 0}
+signals={data.aiDetection?.signals}
+frameworks={data.aiDetection?.githubSignal?.frameworks}
+/>
+<AiDetectionAccordion />
+</div>
+</div>
+</div>
 
-{/* Z-Score Breakdown */}
-<div className="bg-surface border border-border rounded-card p-6 space-y-4">
+{/* ROW 2 — Score Breakdown | Explainability | History */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+{/* Score Breakdown */}
+<div className="bg-surface border border-border rounded-card p-5 space-y-4">
 <h2 className="font-syne font-semibold text-text-primary">Score Breakdown</h2>
 <ZScoreBreakdown
 zscores={data.zscores}
@@ -314,29 +321,28 @@ totalTracked={(data as any).totalTracked ?? 300}
 </div>
 
 {/* Explainability */}
-<div className="bg-surface border border-border rounded-card p-6 space-y-3">
+<div className="bg-surface border border-border rounded-card p-5 space-y-3">
 <h2 className="font-syne font-semibold text-text-primary">Explainability</h2>
 <div className="space-y-2">
-{explainability.map((item, i) => (
+{explainability.length > 0 ? explainability.map((item, i) => (
 <div key={i} className="flex items-center justify-between text-sm font-inter">
 <span className={item.isWarning ? 'text-watch' : 'text-text-secondary'}>
 {item.isWarning ? '⚠️ ' : ''}{item.label}
 </span>
-<span
-className="font-mono font-medium"
-style={{ color: item.value >= 0 ? '#4ADE80' : '#F87171' }}
->
+<span className="font-mono font-medium" style={{ color: item.value >= 0 ? '#4ADE80' : '#F87171' }}>
 {item.value >= 0 ? '+' : ''}{item.value}
 </span>
 </div>
-))}
+)) : (
+<p className="text-xs text-text-secondary font-inter">No significant signals detected.</p>
+)}
 </div>
 </div>
 
-{/* B5: Classification history */}
-{history.length > 1 && (
-<div className="bg-surface border border-border rounded-card p-6 space-y-3">
+{/* Classification History */}
+<div className="bg-surface border border-border rounded-card p-5 space-y-3">
 <h2 className="font-syne font-semibold text-text-primary">Classification History</h2>
+{history.length > 1 ? (
 <div className="space-y-2">
 {history.slice(0, 7).map((h, i) => (
 <div key={i} className="flex items-center justify-between text-xs font-inter">
@@ -347,7 +353,6 @@ style={{ color: item.value >= 0 ? '#4ADE80' : '#F87171' }}
 <span className="font-mono" style={{ color: h.score >= 70 ? '#4ADE80' : h.score >= 45 ? '#FACC15' : '#F87171' }}>
 {h.score}
 </span>
-{/* B6: AI prob trend */}
 <span className="text-text-secondary">
 AI {h.ai_probability}%
 {i < history.length - 1 && (
@@ -359,13 +364,16 @@ AI {h.ai_probability}%
 </div>
 ))}
 </div>
-</div>
+) : (
+<p className="text-xs text-text-secondary font-inter">No history yet — check back after next scoring cycle.</p>
 )}
+</div>
+</div>
 
-{/* A8: Tx Timeline */}
+{/* ROW 3 — Recent Transactions */}
 <TxTimeline txs={recentTxs} chain={data.chain ?? 'SOL'} />
 
-{/* Groq Insight */}
+{/* ROW 4 — Intel */}
 <div className="bg-surface border border-border rounded-card p-6 space-y-3">
 <div className="flex items-center gap-2">
 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -381,22 +389,16 @@ AI {h.ai_probability}%
 </p>
 </div>
 
-{/* Coming Soon */}
+{/* ROW 5 — Coming Soon */}
 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 {[
-{ label: '🔔 Smart Alerts', desc: 'Get notified when this wallet moves.' },
+{ label: '🔔 Smart Alerts', desc: 'Get notified when this wallet  moves.' },
 { label: '⭐ Follow Wallet', desc: 'Track this wallet across sessions.' },
-{ label: '🔗 Influence Graph', desc: 'See who copies this wallet.' },
-].map((f) => (
-<div
-key={f.label}
-className="bg-surface border border-border rounded-card p-4 opacity-50 cursor-not-allowed"
->
+{ label: '🔗 Influence Graph', desc: 'See who copies this wallet.' },].map((f) => (
+<div key={f.label} className="bg-surface border border-border rounded-card p-4 opacity-50 cursor-not-allowed">
 <div className="flex items-center justify-between mb-1">
 <p className="text-sm font-inter font-medium text-text-primary">{f.label}</p>
-<span className="text-xs px-1.5 py-0.5 rounded-pill bg-surface-2 text-text-secondary border border-border">
-Soon
-</span>
+<span className="text-xs px-1.5 py-0.5 rounded-pill bg-surface-2 text-text-secondary border border-border">Soon</span>
 </div>
 <p className="text-xs text-text-secondary font-inter">{f.desc}</p>
 </div>

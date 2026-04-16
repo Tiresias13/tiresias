@@ -204,13 +204,17 @@ const topTokens = Array.isArray(tokens)
 ? tokens.slice(0, 4).map((t) => String(t.symbol ?? '')).filter(Boolean)
 : []
 
-const txsArray = Array.isArray(txs) ? txs : []
+const txsArray = Array.isArray(txs) ? txs : Array.isArray((txs as any)?.result) ? (txs as any).result : Array.isArray((txs as any)?.list) ? (txs as any).list : []
 const recentTxs: TxItem[] = txsArray.slice(0, 20).map((tx: any) => ({
-blockTime: Number(tx.block_time ?? tx.blockTime ?? 0),
-symbol: String(tx.token_symbol ?? tx.symbol ?? ''),
+blockTime: tx.time ? Math.floor(new Date(tx.time).getTime() / 1000) : Number(tx.block_time ?? tx.blockTime ?? 0),
+symbol: String(tx.from_symbol ?? tx.to_symbol ?? tx.token_symbol ?? tx.symbol ?? ''),
 side: (tx.side ?? tx.type ?? '').toLowerCase().includes('buy') ? 'buy' : 'sell',
-amount: tx.amount_usd != null ? Number(tx.amount_usd) : tx.amount != null ? Number(tx.amount) : undefined,
-signature: String(tx.tx_hash ?? tx.signature ?? ''),
+amount: tx.value_usd != null
+? Number(tx.value_usd)
+: (tx.from_amount != null && tx.from_price_usd != null)
+? Number(tx.from_amount) * Number(tx.from_price_usd)
+: undefined,
+signature: String(tx.transaction ?? tx.tx_hash ?? tx.signature ?? ''),
 chain,
 }))
 
@@ -218,23 +222,25 @@ const tradeRatio = totalTrades > 0 ? buyTrades / totalTrades : 0.5
 
 const pq = Math.min(100, Math.round((winRate * 60) + (Math.min(totalProfit, 1000) / 1000 * 40)))
 const timingStdDev = timingAnalysis?.stdDevIntervalMs ?? 60000
-const te = Math.min(100, Math.round(Math.max(0, 100 - (timingStdDev / 3000))))
+const te = Math.min(100, Math.round(Math.max(0, 100 - (timingStdDev / 864000))))
 const bc = Math.min(100, Math.round(50 + (Math.abs(tradeRatio - 0.5) * 100)))
 const tokenBreadth = tokens.length || 1
 const si = Math.min(100, Math.round(Math.max(0, 100 - (tokenBreadth * 3) + (totalTrades > 50 ? 20 : 0))))
 const totalVolume = Number(rawInfo?.total_volume ?? rawInfo?.volume ?? 0)
 const txOverlapScore = (() => {
-const txList = Array.isArray(txs) ? txs : []
+const txList = Array.isArray(txs) ? txs : Array.isArray((txs as any)?.result) ? (txs as any).result : Array.isArray((txs as any)?.list) ? (txs as any).list : []
 if (txList.length < 5) return 0
 
 // Unique tokens yang di-trade
-const uniqueTokens = new Set(txList.map((tx: any) => tx.token_address ?? tx.token ?? '').filter(Boolean))
+const uniqueTokens = new Set(txList.map((tx: any) => tx.to_address ?? tx.token_address ?? tx.token ?? '').filter(Boolean))
 const uniqueCount = uniqueTokens.size
 
 // Makin banyak unique token + volume tinggi = influence lebih tinggi
-const volumeScore = Math.min(50, Math.round(Math.min(totalVolume, 50000) / 1000))
-const breadthScore = Math.min(50, uniqueCount * 3)
-return volumeScore + breadthScore
+const txVolume = txList.reduce((sum: number, tx: any) => sum + (Number(tx.from_amount ?? 0) * Number(tx.from_price_usd ?? 0)), 0)
+const volumeScore = Math.min(50, Math.round(Math.min(txVolume || totalVolume, 50000) / 1000))
+const breadthScore = Math.min(40, uniqueCount * 2)
+const consistencyScore = txList.length > 50 ? 10 : txList.length > 20 ? 5 : 0
+return Math.min(100, volumeScore + breadthScore + consistencyScore)
 })()
 const ni = Math.min(100, txOverlapScore)
 
@@ -294,7 +300,7 @@ if (isScamContract) score = Math.min(score, 40)
 const hasSleepPattern = timingAnalysis?.hasSleepPattern ?? true
 
 const heatmapUniformity = (() => {
-const txList = Array.isArray(txs) ? txs : []
+const txList = Array.isArray(txs) ? txs : Array.isArray((txs as any)?.result) ? (txs as any).result : Array.isArray((txs as any)?.list) ? (txs as any).list : []
 if (txList.length < 10) return 0
 const hours = new Array(24).fill(0)
 for (const tx of txList) {

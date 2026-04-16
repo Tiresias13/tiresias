@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import { getCachedScore } from '@/lib/supabase'
 import { getAgentLabel, getAgentEmoji, getAgentColor, getScoreColor, getChainColor, getActionLabel, getActionColor } from '@/lib/scoring'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
 const address = req.nextUrl.searchParams.get('address') ?? ''
@@ -18,17 +18,19 @@ let winRate = 0
 let totalProfit = 0
 
 try {
-const cached = await getCachedScore(address)
-if (cached) {
-score = cached.score
-agentType = cached.agent_type
-actionRec = cached.action_rec
-aiProbability = cached.ai_probability
-winRate = cached.win_rate
-totalProfit = cached.total_profit
+const base = req.nextUrl.origin
+const res = await fetch(`${base}/api/wallet/${address}?chain=${chain}`, { cache: 'no-store' })
+if (res.ok) {
+const json = await res.json()
+score = json.score ?? 0
+agentType = json.agentType ?? 'momentum'
+actionRec = json.actionRec ?? 'active'
+aiProbability = json.aiDetection?.probability ?? 0
+winRate = json.winRate ?? 0
+totalProfit = json.totalProfit ?? 0
 }
 } catch {
-// Use defaults if no cache
+// Use defaults
 }
 
 const truncated = address.length > 12
@@ -184,7 +186,7 @@ fontSize: '14px',
 <div style={{ display: 'flex', gap: '24px', color: '#888', fontSize: '14px' }}>
 <span>Win rate: <span style={{ color: '#F5F5F5' }}>{(winRate * 100).toFixed(0)}%</span></span>
 <span>PnL: <span style={{ color: totalProfit >= 0 ? '#4ADE80' : '#F87171' }}>
-{totalProfit >= 0 ? '+' : ''}{totalProfit.toFixed(1)} SOL
+{totalProfit >= 0 ? '+' : ''}${Math.abs(totalProfit).toLocaleString('en-US', { maximumFractionDigits: 0 })}
 </span></span>
 </div>
 </div>
@@ -193,7 +195,7 @@ fontSize: '14px',
 {/* Bottom */}
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 <span style={{ color: '#444', fontSize: '13px' }}>
-On-chain intelligence · tiresias.xyz
+On-chain intelligence · tiresiasave.vercel.app
 </span>
 <span style={{ color: '#E8FF47', fontSize: '13px', opacity: 0.6 }}>
 "See the pattern behind the profit."

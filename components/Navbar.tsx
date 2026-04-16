@@ -25,6 +25,8 @@ duration: 4000,
 }
 
 return (
+<>
+{/* Top navbar */}
 <nav className="sticky top-0 z-40 w-full border-b border-border bg-bg/90 backdrop-blur-sm">
 <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
 
@@ -51,7 +53,7 @@ className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-p
 )}
 </div>
 
-{/* Nav links — desktop */}
+{/* Nav links — desktop only */}
 <div className="hidden md:flex items-center gap-6">
 {NAV_LINKS.map((link) => (
 <Link
@@ -69,7 +71,7 @@ pathname === link.href
 ))}
 </div>
 
-{/* Connect Wallet — locked */}
+{/* Connect Wallet */}
 <div className="group relative">
 <button
 onClick={handleConnectWallet}
@@ -78,8 +80,6 @@ disabled
 >
 Connect Wallet
 </button>
-
-{/* Desktop tooltip */}
 <div className="absolute right-0 top-full mt-2 w-64 px-3 py-2 rounded-card text-xs text-text-secondary bg-surface-2 border border-border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 hidden md:block">
 Your wallet is not analyzed yet. Unlock your on-chain identity.
 <div className="absolute bottom-full right-4 border-4 border-transparent border-b-surface-2" />
@@ -88,5 +88,30 @@ Your wallet is not analyzed yet. Unlock your on-chain identity.
 
 </div>
 </nav>
+
+{/* Mobile bottom nav */}
+<nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg/95 backdrop-blur-sm border-t border-border">
+<div className="flex items-center justify-around h-14 px-2">
+{NAV_LINKS.map((link) => (
+<Link
+key={link.href}
+href={link.href}
+className={cn(
+'flex flex-col items-center justify-center flex-1 h-full text-[10px] font-inter transition-colors gap-0.5',
+pathname === link.href
+? 'text-accent'
+: 'text-text-secondary'
+)}
+>
+<span className="text-base leading-none">
+{link.href === '/' ? '⌂' : link.href === '/leaderboard' ? '⬆' : link.href === '/signals' ? '◎' : link.href === '/explorer' ? '⊞' : '○'}
+</span>
+<span>{link.label}
+    </span>
+</Link>
+))}
+</div>
+</nav>
+</>
 )
 }
