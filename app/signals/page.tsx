@@ -31,7 +31,7 @@ const [signals, setSignals] = useState<SignalItem[]>([])
 const [loading, setLoading] = useState(true)
 
 useEffect(() => {
-fetch('/api/leaderboard?limit=20&sort=recent')
+fetch('/api/leaderboard?limit=20')
 .then((r) => r.ok ? r.json() : [])
 .then((data) => {
 setSignals(Array.isArray(data) ? data : [])
@@ -46,14 +46,14 @@ return (
 {/* Header */}
 <div className="flex items-center justify-between">
 <div>
-<h1 className="font-syne font-bold text-3xl text-text-primary">Signals</h1>
+<h1 className="font-syne font-bold text-3xl text-text-primary">Radar</h1>
 <p className="text-text-secondary font-inter text-sm mt-1">
-Recently scored wallets. Smart money moves first.
+Top performing wallets ranked by intelligence score.
 </p>
 </div>
 <div className="flex items-center gap-2 text-xs font-inter text-text-secondary">
 <span className="w-1.5 h-1.5 rounded-full bg-follow animate-pulse" />
-Live
+{signals.length} wallets tracked
 </div>
 </div>
 
@@ -99,6 +99,9 @@ className="font-mono text-xs text-text-secondary hover:text-accent transition-co
 </Link>
 <ChainBadge chain={s.chain} size="sm" />
 <AgentBadge type={(s.agent_type ?? 'momentum') as any} size="sm" />
+<span className="text-xs text-text-secondary font-inter">
+WR {((Number(s.win_rate ?? 0)) * 100).toFixed(0)}%
+</span>
 </div>
 </div>
 

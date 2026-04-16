@@ -207,8 +207,18 @@ const topTokens = Array.isArray(tokens)
 const txsArray = Array.isArray(txs) ? txs : Array.isArray((txs as any)?.result) ? (txs as any).result : Array.isArray((txs as any)?.list) ? (txs as any).list : []
 const recentTxs: TxItem[] = txsArray.slice(0, 20).map((tx: any) => ({
 blockTime: tx.time ? Math.floor(new Date(tx.time).getTime() / 1000) : Number(tx.block_time ?? tx.blockTime ?? 0),
-symbol: String(tx.from_symbol ?? tx.to_symbol ?? tx.token_symbol ?? tx.symbol ?? ''),
-side: (tx.side ?? tx.type ?? '').toLowerCase().includes('buy') ? 'buy' : 'sell',
+side: (() => {
+const fromIsBase = ['SOL', 'USDC', 'USDT', 'WSOL', 'ETH', 'BNB', 'WBNB'].includes(tx.from_symbol ?? '')
+const toIsBase = ['SOL', 'USDC', 'USDT', 'WSOL', 'ETH', 'BNB', 'WBNB'].includes(tx.to_symbol ?? '')
+if (fromIsBase && !toIsBase) return 'buy'
+if (toIsBase && !fromIsBase) return 'sell'
+return (tx.side ?? tx.type ?? '').toLowerCase().includes('buy') ? 'buy' : 'sell'
+})(),
+symbol: (() => {
+const fromIsBase = ['SOL', 'USDC', 'USDT', 'WSOL', 'ETH', 'BNB', 'WBNB'].includes(tx.from_symbol ?? '')
+if (fromIsBase) return String(tx.to_symbol ?? tx.token_symbol ?? '')
+return String(tx.from_symbol ?? tx.token_symbol ?? '')
+})(),
 amount: tx.value_usd != null
 ? Number(tx.value_usd)
 : (tx.from_amount != null && tx.from_price_usd != null)

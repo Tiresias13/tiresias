@@ -81,9 +81,9 @@ return (
 <div className="max-w-7xl mx-auto px-4 py-10 space-y-8">
 
 <div>
-<h1 className="font-syne font-bold text-3xl text-text-primary">Leaderboard</h1>
+<h1 className="font-syne font-bold text-3xl text-text-primary">Top Agents</h1>
 <p className="text-text-secondary font-inter text-sm mt-1">
-Top performing wallets · Ranked by TS Score · Updated daily
+Wallets ranked by on-chain behavioral score · Updated daily
 </p>
 </div>
 
