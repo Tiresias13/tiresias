@@ -3,7 +3,7 @@ name: Daily Scoring Batch
 on:
 schedule:
 - cron: '0 8 * * *'
-workflow_dispatch: # manual trigger juga bisa
+workflow_dispatch:
 
 jobs:
 score:
