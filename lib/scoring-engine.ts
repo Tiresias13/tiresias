@@ -197,12 +197,12 @@ const buyTrades = Number(rawInfo?.total_purchase ?? 0)
 const sellTrades = Number(rawInfo?.total_sold ?? 0)
 const totalTrades = buyTrades + sellTrades || txs.length
 const winRate = Number(rawInfo?.total_win_ratio ?? 0) / 100
-const rawProfit = parseFloat(String(rawInfo?.total_profit ?? '0'))
-// Sanity check: cap at $10M (anything above is likely unit mismatch from AVE)
+const rawProfit = parseFloat(String(rawInfo?.total_realized_profit ?? rawInfo?.total_profit ?? '0'))
+
+// Use realized profit only; cap at $10M to filter outliers (unrealized inflation)
 const totalProfit = isNaN(rawProfit) ? 0 : Math.min(rawProfit, 10_000_000)
 const topTokens = Array.isArray(tokens)
-? tokens.slice(0, 4).map((t) => String(t.symbol ?? '')).filter(Boolean)
-: []
+? tokens.slice(0, 4).map((t) => String(t.symbol ?? '')).filter(Boolean): []
 
 const txsArray = Array.isArray(txs) ? txs : Array.isArray((txs as any)?.result) ? (txs as any).result : Array.isArray((txs as any)?.list) ? (txs as any).list : []
 const recentTxs: TxItem[] = txsArray.slice(0, 20).map((tx: any) => ({

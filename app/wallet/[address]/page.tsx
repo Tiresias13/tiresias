@@ -127,15 +127,15 @@ fetch(`/api/history/${address}`)
 .then((h) => setHistory(Array.isArray(h) ? h : []))
 .catch(() => {})
 
-fetch(`/api/wallet/${address}?chain=${chain}&refresh=true`)
+fetch(`/api/wallet/${address}?chain=${chain}`)
 .then((res) => {
 if (!res.ok) throw new Error('Not found')
 return res.json()
 })
 .then((json) => {
-// Auto re-fetch with refresh if insight is missing
+// Auto re-fetch if insight is missing
 if (!json.insight) {
-return fetch(`/api/wallet/${address}?chain=SOL&refresh=true`)
+return fetch(`/api/wallet/${address}?chain=SOL`)
 .then((res) => res.json())
 }
 return json

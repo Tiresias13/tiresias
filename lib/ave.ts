@@ -31,15 +31,17 @@ tag_items: { address: string; symbol: string; volume: number }[]
 }
 
 export interface AveWalletInfo {
-wallet_address: string
-chain: string
-total_profit: number
-total_profit_rate: number
-token_profit_rate: number
-total_trades: number
-total_volume: number
-total_purchase: number
-total_sold: number
+  wallet_address: string
+  chain: string
+  total_profit: number
+  total_realized_profit?: number
+  total_unrealized_profit?: number
+  total_profit_rate: number
+  token_profit_rate: number
+  total_trades: number
+  total_volume: number
+  total_purchase: number
+  total_sold: number
 }
 
 export interface AveWalletToken {
